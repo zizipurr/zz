@@ -1,0 +1,125 @@
+/* 对齐参考 .kpi-card：毛玻璃 + 12px 圆角 + 角标 hover 显示 */
+
+.kpiContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.kpiCard {
+  position: relative;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  box-shadow: var(--shadow-panel);
+  padding: 16px 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+::global(html.dark) .kpiCard {
+  border-color: rgba(0, 229, 255, 0.25);
+  box-shadow: var(--shadow-panel), inset 0 1px 1px rgba(0, 229, 255, 0.08);
+}
+
+::global(html.dark) .kpiCard:hover {
+  border-color: rgba(0, 229, 255, 0.5);
+  box-shadow: 0 8px 40px rgba(0, 229, 255, 0.2), inset 0 1px 1px rgba(0, 229, 255, 0.15);
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.kpiHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.kpiIcon {
+  font-size: 20px;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+.heroNumber {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--accent-color);
+  filter: var(--accent-glow);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.heroNumber.red {
+  color: var(--color-danger);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--color-danger) 40%, transparent));
+}
+
+.kpiFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.kpiDelta {
+  font-size: 10px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kpiDelta.up {
+  color: var(--color-success);
+}
+
+.kpiDelta.down {
+  color: var(--color-danger);
+}
+
+.tenantBadge {
+  font-size: 9px;
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-color) 30%, transparent);
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 16px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .kpiContainer {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .kpiContainer {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .kpiCard {
+    padding: 16px;
+  }
+
+  .heroNumber {
+    font-size: 24px;
+  }
+}

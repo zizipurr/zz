@@ -1,0 +1,124 @@
+## 智城云项目开发规则
+
+### 核心原则
+- 有真实后端接口时直接调用，不写 Mock
+- 需要新接口先写后端（NestJS），Postman验证通过后再写前端
+- 严禁为未开发的后端接口提前创建 msw mock handler
+- 每次新接口就绪后，同步更新本文件的"已就绪接口"列表
+
+### UI 设计系统（必读）
+- **权威文档**：`.agent/skills/DESIGN.md`（Linear 风格暗色设计系统）。凡涉及页面布局、配色、字体、按钮/卡片/表单/导航等 UI 实现，**先对照该文档**再写代码；细节以色板、字号阶梯、组件规范章节为准，勿凭印象随意发挥。
+- **视觉方向**：暗色优先（画布 `#08090a`、面板 `#0f1011`、抬升面 `#191a1b`）；文字用 `#f7f8f8` / `#d0d6e0` / `#8a8f98` 层级；**唯一主强调色**为靛紫系（交互 `#7170ff`、品牌底 `#5e6ad2`、悬停 `#828fff`），少用杂色；边框以 `rgba(255,255,255,0.05)`～`0.08` 半透明白为主；成功态仅用文档中的绿色系作状态指示。
+- **字体**：主字体 Inter Variable（全局启用 OpenType `cv01`、`ss03`）；UI 常用字重 **510**（介于 regular 与 medium）；展示大标题按文档负字间距；等宽场景用 Berkeley Mono 及文档所列 fallback。
+- **组件与节奏**：按钮默认 ghost/半透明底、圆角约 6px；卡片 8px、大面板可达 12px～22px；间距以 **8px 基准网格**为主；卡片/容器背景用低不透明度白叠层而非高饱和纯色块。
+- **与现有页面关系**：仓库内若仍有旧版「青科幻」大屏色板页面，**新增与重构的 UI 一律按 DESIGN.md**；旧页逐步迁移时对齐同一套 token，不在新代码中沿用旧主色（如 `#00c8ff` 体系）。
+
+### 样式规范
+- 所有样式文件统一使用 .scss（Sass），禁止使用 .css
+- 使用 CSS Modules：文件名格式为 ComponentName.module.scss
+- 公共变量和全局样式写在 src/styles/global.scss 中
+- 使用 CSS 变量（var(--xxx)）引用全局设计 token，**变量取值与 `.agent/skills/DESIGN.md` 中的色板、圆角、间距保持一致**
+- 禁止内联 style 属性（动态颜色/宽度除外）
+
+### 路径引入规范
+- 所有模块引入使用 @/ 别名，禁止使用 ../ 相对路径
+- 正确：import request from '@/api/request'
+- 正确：import styles from '@/components/TopBar/TopBar.module.scss'
+- 错误：import request from '../../api/request'
+
+### 技术栈
+- 前端大屏（ioc-dashboard）：React + Vite + TypeScript + Zustand + Sass
+  - 不使用任何 UI 组件库
+  - 样式全部手写 scss
+- 管理后台（admin）：React + Vite + TypeScript + Zustand + MUI
+- 后端（api）：NestJS + TypeORM + MySQL + JWT + Socket.IO
+- 网格员H5（miniprogram）：React + Vite + TypeScript + Zustand + Sass
+  - 移动端优先，最大宽度 480px
+  - 后续迁移至 Uni-app 小程序
+- 包管理：pnpm Workspace Monorepo
+
+### 项目结构
+apps/ioc-dashboard  → 大屏前端        localhost:8000
+apps/admin          → 管理后台         localhost:8001
+apps/api            → NestJS后端       localhost:3000
+apps/miniprogram    → 网格员H5         localhost:8002
+apps/community-screen → 社区大屏       localhost:8003（5月）
+packages/types      → 共享 TS 类型
+packages/utils      → 共享工具函数
+
+### 后端已就绪接口（直接调用，不写 Mock）
+POST   /api/auth/login
+POST   /api/auth/register
+GET    /api/auth/profile
+GET    /api/events
+GET    /api/events/:id
+POST   /api/events
+POST   /api/events/:id/dispatch
+POST   /api/events/:id/complete
+GET    /api/messages
+GET    /api/messages/unread
+POST   /api/messages/:id/read
+POST   /api/messages/read-all
+GET    /api/kpi/summary
+GET    /api/locations
+
+### 后端通用层（src/common/）
+- 响应格式统一：{ code: 0, data: any, message: 'ok' }
+- 错误格式统一：{ code: HTTP状态码, data: null, message: '错误信息' }
+- AllExceptionsFilter 全局捕获所有异常
+- TransformInterceptor 全局包装成功响应
+- CurrentUser 装饰器获取当前登录用户
+- 新增 Controller 不需要手动包装响应格式，直接 return 数据即可
+
+### 前端请求规范
+- baseURL 统一用 '/api'，通过 Vite proxy 转发到后端
+- 响应拦截器已自动解包 data 字段，store 里直接用 res.data 即可
+- 不要在 store 里写 res.data.data
+
+### 前端交互规范（禁止重复提交）
+- `apps/miniprogram` **所有会调用接口（http.get/post 等）的按钮**必须做到：接口调用进行中不允许再次点击触发
+- 必须同时做到：
+  - **UI 层禁用**：按钮绑定 `:loading` + `:disabled`（或等效禁用样式/交互），实现“调用期间置灰不可点”
+  - **函数内 guard**：例如 `if (loading.value) return` / `if (submitting.value) return`
+- 可选：如需额外防连点（非接口按钮/弱网场景），可使用工具 `@/utils/tapDebounce`（或兼容入口 `@/utils/tap-debounce`）的 `withTapDebounce(fn, cooldownMs)`
+
+### Socket.IO 事件
+new_message    → 有新消息，前端刷新未读数
+event_updated  → 事件状态变更，前端刷新事件列表
+
+
+### 开发顺序规范
+1. 确认需要哪个接口
+2. 先在 apps/api 写 NestJS 接口（Entity + Service + Controller）
+3. Postman 验证接口返回正确
+4. 再在前端页面接入真实接口
+- 不允许跳过步骤2直接写前端
+
+### 方案选择原则
+- 直接给最佳实践方案，不给临时/降级方案
+- 除非明确说"临时演示用"，否则默认按生产级标准输出
+- 涉及跨域：统一用 Vite proxy（开发）+ Nginx proxy（生产），不用 baseURL 写死地址
+- 涉及环境变量：.env.local 存配置，代码里不硬编码地址
+- 涉及认证：JWT 7天有效期，refresh token 机制按需加
+
+### 演示数据原则
+- 所有静态/Mock数据必须考虑演示场景
+- 演示流程：新建事件 → 大屏显示 → AI分析 → 派单 → H5接单 → 完成 → 大屏更新
+- 禁止在组件里硬编码与演示流程冲突的假数据
+- 地图标注点颜色必须与真实事件数据联动（不能写死红色/蓝色）
+- KPI 数字从真实接口读取，不写死
+- AI助手的告警文本必须读取当前最高危的真实事件生成，不写死"福田区G-042"
+- 演示前执行数据重置SQL，确保事件全部是pending状态
+- 每次演示前检查清单：
+  1. 后端服务正常运行
+  2. 数据库事件全部重置为pending
+  3. 网格员H5可正常登录
+  4. Socket连接正常（大屏Console有connected日志）
+  5. 地图标注点与事件数据联动
+
+### 5月规划（不在当前迭代范围）
+- 智慧社区多端产品矩阵
+- 网格员H5迁移至Uni-app小程序
+- 高德地图真实GIS数据接入
+- AI助手接入公司大模型
+

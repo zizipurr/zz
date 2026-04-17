@@ -1,0 +1,155 @@
+@use './panels';
+
+/* 主题初始化（防止 FOUC，加到 index.html <head> 最前面的 <script>）*/
+/* 见参考文件第9-15行 */
+
+:root {
+  /* 亮色模式 - Nexora 实体沙盘风 */
+  --bg-canvas: #f0f4f8;
+  --bg-glass: rgba(255,255,255,0.75);
+  --border-glass: rgba(0,0,0,0.08);
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --accent-color: #f97316;
+  --accent-hover: #ea580c;
+  --accent-glow: drop-shadow(0 0 8px rgba(249,115,22,0.35));
+  --shadow-panel: 0 4px 24px rgba(0,0,0,0.08);
+  --font-sans: 'Noto Sans SC', sans-serif;
+  --font-display: 'Rajdhani', sans-serif;
+  --font-mono: 'Courier New', monospace;
+
+  /* 语义色（列表、告警、KPI 等，避免组件内硬编码） */
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --color-success: #10b981;
+  --metric-bar-track: color-mix(in srgb, var(--text-primary) 12%, transparent);
+  --panel-inset-glow: transparent;
+  --panel-corner-radial: transparent;
+  --kpi-border-accent: var(--border-glass);
+  --kpi-hover-shadow: color-mix(in srgb, var(--text-primary) 12%, transparent);
+  --event-hover-bg: color-mix(in srgb, var(--accent-color) 5%, transparent);
+  --alert-bg: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  --alert-border: color-mix(in srgb, var(--color-danger) 20%, transparent);
+  --alert-bg-hover: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  --on-accent: #ffffff;
+  --event-hover-border: color-mix(in srgb, var(--accent-color) 35%, transparent);
+  --event-hover-ambient: none;
+  --alert-ambient-shadow: none;
+  --alert-ambient-shadow-hover: none;
+  --message-hover-bg: color-mix(in srgb, var(--accent-color) 5%, transparent);
+
+  /* 兼容旧组件中的变量名 */
+  --text-muted: color-mix(in srgb, var(--text-secondary) 70%, transparent);
+  --danger: var(--color-danger);
+  --red: var(--color-danger);
+  --amber: var(--color-warning);
+  --red-dim: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  --border: var(--border-glass);
+
+}
+
+html.dark {
+  /* 暗色模式 - Elementum 深空指挥风 */
+  --bg-canvas: #0a0e1a;
+  --bg-glass: rgba(10,20,40,0.6);
+  --border-glass: rgba(34,211,238,0.2);
+  --text-primary: #e8f4f8;
+  --text-secondary: #8ba3b8;
+  --accent-color: #0ea5e9;
+  --accent-hover: #38bdf8;
+  --accent-glow: drop-shadow(0 0 12px #0284c7) drop-shadow(0 0 20px rgba(0,229,255,0.4));
+  --shadow-panel: 0 8px 40px rgba(0,229,255,0.15), 0 0 80px rgba(0,100,255,0.08);
+  --metric-bar-track: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  --panel-inset-glow: rgba(0, 229, 255, 0.1);
+  --panel-corner-radial: rgba(0, 229, 255, 0.08);
+  --kpi-border-accent: rgba(0, 229, 255, 0.25);
+  --kpi-hover-shadow: color-mix(in srgb, var(--accent-color) 20%, transparent);
+  --event-hover-bg: rgba(0, 229, 255, 0.08);
+  --alert-bg: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  --alert-border: color-mix(in srgb, var(--color-danger) 30%, transparent);
+  --alert-bg-hover: color-mix(in srgb, var(--color-danger) 18%, transparent);
+  --event-hover-border: rgba(0, 229, 255, 0.3);
+  --event-hover-ambient: 0 0 20px rgba(0, 229, 255, 0.1);
+  --alert-ambient-shadow: 0 0 20px color-mix(in srgb, var(--color-danger) 22%, transparent);
+  --alert-ambient-shadow-hover: 0 0 30px color-mix(in srgb, var(--color-danger) 32%, transparent);
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 100%;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* <1024：允许页面纵向滚动，避免小屏内容不可达 */
+@media (max-width: 1023.98px) {
+  html, body {
+    height: auto;
+    max-height: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  #root {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .app-shell {
+    overflow: visible;
+  }
+}
+
+/* 暗色模式扫描线动画 */
+html.dark body::after {
+  content: '';
+  position: fixed;
+  top: -100%;
+  left: 0; right: 0;
+  height: 200px;
+  background: linear-gradient(to bottom,
+    transparent,
+    rgba(0,229,255,0.02),
+    transparent);
+  animation: scan 8s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes scan { to { top: 100%; } }
+
+/* 暗色模式网格背景 */
+html.dark body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+::-webkit-scrollbar { width: 0; height: 0; }

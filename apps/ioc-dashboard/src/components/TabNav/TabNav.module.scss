@@ -1,0 +1,62 @@
+/* 严格对齐 ioc-dashboard-command-center.html .tab-nav / .tab */
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px;
+  height: 48px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-glass);
+  flex-shrink: 0;
+  overflow: hidden;
+  flex-wrap: wrap;
+  z-index: 99;
+  transition: background 0.3s ease;
+}
+
+.tab {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-family: var(--font-display);
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--text-primary) 3%, transparent);
+  }
+
+  &.active {
+    color: var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+    font-weight: 500;
+  }
+}
+
+::global(html.dark) .tab:not(.active):hover {
+  background: color-mix(in srgb, var(--on-accent) 5%, transparent);
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 0 16px;
+    height: auto;
+    min-height: 48px;
+    overflow: hidden;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}

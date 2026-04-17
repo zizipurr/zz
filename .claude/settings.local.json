@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST https://dev.shukeyun.com/scc/zcy-platform-api/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
+      "Bash(timeout 25 pnpm run dev:h5)",
+      "Bash(pnpm migration:generate add_user_openid)",
+      "Bash(pnpm migration:run)",
+      "Bash(pnpm migration:sync)"
+    ]
+  }
+}

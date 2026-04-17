@@ -1,0 +1,61 @@
+/* 通用 glassPanel（对齐 ioc-dashboard-command-center.html） */
+
+.glassPanel {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  box-shadow: var(--shadow-panel);
+  color: var(--text-primary);
+  padding: 20px;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+html.dark .glassPanel {
+  box-shadow:
+    var(--shadow-panel),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 24%, transparent),
+    0 0 28px color-mix(in srgb, var(--accent-color) 14%, transparent);
+}
+
+html.dark .glassPanel:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 45%, transparent);
+  box-shadow:
+    var(--shadow-panel),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 32%, transparent),
+    0 0 36px color-mix(in srgb, var(--accent-color) 22%, transparent);
+}
+
+html.dark .glassPanel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(
+    circle at top right,
+    var(--panel-corner-radial) 0%,
+    transparent 70%
+  );
+  border-top-right-radius: 16px;
+  pointer-events: none;
+}
+
+.glassPanelShrink {
+  flex-shrink: 0;
+}
+
+.glassPanelGrow {
+  flex: 1;
+  min-height: 0;
+}

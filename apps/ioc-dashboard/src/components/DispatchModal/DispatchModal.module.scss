@@ -1,0 +1,277 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-canvas) 76%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.box {
+  width: min(640px, 94vw);
+  max-height: min(82dvh, 820px);
+  background: color-mix(in srgb, var(--bg-glass) 88%, var(--bg-canvas));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  box-shadow: var(--shadow-panel);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--accent-color);
+}
+
+.close {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-glass);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+  }
+}
+
+.body {
+  padding: 16px 18px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field {
+  margin-bottom: 12px;
+
+  label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+}
+
+.val {
+  font-size: 13px;
+  color: var(--text-primary);
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--accent-color) 4%, transparent);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+}
+
+.levelVal.high {
+  color: var(--color-danger);
+}
+
+.levelVal.mid {
+  color: var(--color-warning);
+}
+
+.levelVal.low {
+  color: var(--accent-color);
+}
+
+// 自定义下拉（替代原生 select，避免 option 白底问题）
+.customSelect {
+  position: relative;
+  width: 100%;
+}
+
+.selectTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: color-mix(in srgb, var(--accent-color) 4%, transparent);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-size: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+
+  &.open, &:hover {
+    border-color: color-mix(in srgb, var(--accent-color) 45%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 12%, transparent);
+  }
+}
+
+.arrow {
+  font-size: 10px;
+  color: var(--text-secondary);
+  transition: transform 0.2s;
+
+  .open & {
+    transform: rotate(180deg);
+  }
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: color-mix(in srgb, var(--bg-glass) 96%, var(--bg-canvas));
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  z-index: 10;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.option {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+  }
+
+  &.selected {
+    color: var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color) 8%, transparent);
+  }
+}
+
+.textarea {
+  width: 100%;
+  background: color-mix(in srgb, var(--accent-color) 4%, transparent);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-size: 12px;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: color-mix(in srgb, var(--accent-color) 45%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 12%, transparent);
+  }
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 64px;
+  max-height: 160px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border-glass);
+}
+
+.btnPrimary,
+.btnDanger,
+.btnGhost {
+  padding: 8px 18px;
+  font-size: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnPrimary {
+  background: color-mix(in srgb, var(--accent-color) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-color) 50%, transparent);
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.btnPrimary:hover {
+  background: color-mix(in srgb, var(--accent-color) 26%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent-color) 35%, transparent);
+}
+
+.btnDanger {
+  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 45%, transparent);
+  color: var(--color-danger);
+}
+
+.btnDanger:hover {
+  background: color-mix(in srgb, var(--color-danger) 22%, transparent);
+}
+
+.btnGhost {
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  color: var(--text-secondary);
+}
+
+.btnGhost:hover {
+  border-color: color-mix(in srgb, var(--text-secondary) 45%, transparent);
+  color: var(--text-primary);
+}
+
+::global(html.dark) .overlay {
+  background: color-mix(in srgb, var(--bg-canvas) 82%, transparent);
+}
+
+::global(html.dark) .box {
+  border-color: color-mix(in srgb, var(--accent-color) 26%, transparent);
+  box-shadow:
+    var(--shadow-panel),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 20%, transparent),
+    0 0 32px color-mix(in srgb, var(--accent-color) 14%, transparent);
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+  }
+}

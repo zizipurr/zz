@@ -1,0 +1,180 @@
+.trigger {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+  backdrop-filter: blur(10px);
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 500;
+  box-shadow: var(--shadow-panel);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.trigger:hover {
+  transform: scale(1.1);
+  border-color: var(--accent-color);
+}
+
+.panel {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  width: 320px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  box-shadow: var(--shadow-panel);
+  z-index: 500;
+  overflow: hidden;
+}
+
+:global(html.dark) .panel {
+  background: rgba(4, 11, 22, 0.95);
+  border-color: rgba(34, 211, 238, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(34, 211, 238, 0.08);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-glass);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+
+  button {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  button:hover {
+    color: var(--text-primary);
+  }
+}
+
+.section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.sectionTitle {
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.btnGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.mockBtn {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  background: transparent;
+}
+.mockBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mockBtn.high {
+  border-color: rgba(255, 64, 96, 0.3);
+  color: #ff4060;
+  background: rgba(255, 64, 96, 0.06);
+}
+.mockBtn.high:hover:not(:disabled) {
+  background: rgba(255, 64, 96, 0.12);
+}
+
+.mockBtn.mid {
+  border-color: rgba(255, 184, 0, 0.3);
+  color: #ffb800;
+  background: rgba(255, 184, 0, 0.06);
+}
+.mockBtn.mid:hover:not(:disabled) {
+  background: rgba(255, 184, 0, 0.12);
+}
+
+.mockBtn.low {
+  border-color: rgba(34, 211, 238, 0.3);
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.06);
+}
+.mockBtn.low:hover:not(:disabled) {
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.actionRow {
+  display: flex;
+  gap: 8px;
+}
+
+.actionBtn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-glass);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.actionBtn:hover:not(:disabled) {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionBtn.reset {
+  border-color: rgba(255, 64, 96, 0.3);
+  color: #ff4060;
+}
+.actionBtn.reset:hover:not(:disabled) {
+  background: rgba(255, 64, 96, 0.08);
+}
+
+.logBox {
+  padding: 10px 16px;
+  max-height: 120px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.06);
+}
+:global(html.dark) .logBox {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.logLine {
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--text-secondary);
+  padding: 2px 0;
+  line-height: 1.5;
+}

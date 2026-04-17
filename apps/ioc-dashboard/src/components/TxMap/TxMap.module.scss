@@ -1,0 +1,95 @@
+.mapFrame {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  box-shadow: var(--shadow-panel);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+:global(html.dark) .mapFrame {
+  border-color: color-mix(in srgb, var(--accent-color) 24%, transparent);
+  box-shadow:
+    var(--shadow-panel),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 22%, transparent),
+    0 0 30px color-mix(in srgb, var(--accent-color) 12%, transparent);
+}
+
+:global(html.dark) .mapFrame:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 44%, transparent);
+  box-shadow:
+    var(--shadow-panel),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 32%, transparent),
+    0 0 40px color-mix(in srgb, var(--accent-color) 20%, transparent);
+}
+
+:global(html.dark) .mapFrame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(0,229,255,0.08) 0%, transparent 50%),
+    radial-gradient(circle at 70% 60%, rgba(0,100,255,0.06) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 2;
+  animation: pulse-bg 8s ease-in-out infinite;
+}
+
+@keyframes pulse-bg {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.cornerTL, .cornerTR, .cornerBL, .cornerBR {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--accent-color);
+  border-style: solid;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 12;
+}
+.cornerTL { top: 8px;    left: 8px;  border-width: 2px 0 0 2px; }
+.cornerTR { top: 8px;    right: 8px; border-width: 2px 2px 0 0; }
+.cornerBL { bottom: 8px; left: 8px;  border-width: 0 0 2px 2px; }
+.cornerBR { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
+
+/* ===== 地图容器 ===== */
+.map {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-width: 0;
+  min-height: clamp(240px, 32vw, 440px);
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  border-radius: 0;
+}
+
+/* 亮色模式：地图正常显示，轻微提升对比度 */
+:global(html:not(.dark)) .map :global(.TMap-container),
+:global(html:not(.dark)) .map :global(canvas) {
+  filter: brightness(0.97) contrast(1.03) !important;
+  transition: filter 0.3s ease;
+}
+
+/* 暗色模式：地图反色变暗 */
+:global(html.dark) .map :global(.TMap-container),
+:global(html.dark) .map :global(canvas) {
+  filter: invert(90%) hue-rotate(180deg) brightness(0.85) contrast(1.1) !important;
+  transition: filter 0.3s ease;
+}
+
+@media (max-width: 1024px) {
+  .mapFrame { min-height: 400px; }
+}

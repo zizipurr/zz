@@ -1,0 +1,259 @@
+/* 智城云品牌：暗色画布 + 靛紫强调，与 DESIGN.md 一致 */
+
+.page {
+  --zcy-canvas: #08090a;
+  --zcy-text: #f7f8f8;
+  --zcy-muted: #8a8f98;
+  --zcy-dim: #d0d6e0;
+  --zcy-accent: #0ea5e9;       /* 主色调：一种温润且清晰的科技蓝 */
+  --zcy-accent-deep: #0284c7;  /* 渐变底色/深色：加深蓝底，压住阵脚，融入夜空 */
+  --zcy-accent-hover: #38bdf8; /* 悬浮色：提亮，模拟发光反馈 */
+  --zcy-border: rgba(255, 255, 255, 0.12); /* 稍微提亮一点边框，增加轮廓感 */
+  --zcy-border-focus: rgba(113, 112, 255, 0.6);
+  --zcy-glass: rgba(12, 15, 20, 0.6); /* 关键修改：改用深色半透明，去除奶白雾感 */
+  --zcy-glass-edge: rgba(255, 255, 255, 0.08);
+
+  position: relative;
+  min-height: 100dvh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+  background: var(--zcy-canvas);
+  overflow-x: hidden;
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-color: var(--zcy-canvas);
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(8, 9, 10, 0.8) 0%,
+      rgba(8, 9, 10, 0.1) 40%, /* 中间变透明，让城市灯光透出来 */
+      rgba(8, 9, 10, 0.1) 60%,
+      rgba(8, 9, 10, 0.9) 100%
+    ),
+    url('../../assets/login-bg.jpg'); /* 确保此路径正确 */
+  background-size: cover, cover;
+  background-position: center top, center bottom;
+  background-repeat: no-repeat, no-repeat;
+  pointer-events: none;
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 380px;
+  padding: 40px 32px;
+  border-radius: 16px;
+  background: var(--zcy-glass);
+  border: 1px solid var(--zcy-border);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.6), /* 加深阴影，让卡片浮出来 */
+    0 1px 2px var(--zcy-glass-edge) inset;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.mark {
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid var(--zcy-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(45deg);
+  border-radius: 8px;
+  box-shadow: 0 0 24px rgba(113, 112, 255, 0.4);
+}
+
+.mark span {
+  transform: rotate(-45deg);
+  color: var(--zcy-accent);
+  font-weight: 700;
+  font-size: 18px;
+  text-shadow: 0 0 8px rgba(113, 112, 255, 0.5);
+}
+
+.name {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--zcy-text);
+}
+
+.name em {
+  color: var(--zcy-accent);
+  font-style: normal;
+}
+
+.title {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: 0.35em;
+  margin-bottom: 8px;
+  color: var(--zcy-text);
+}
+
+.sub {
+  font-size: 11px;
+  color: var(--zcy-muted);
+  letter-spacing: 0.28em;
+}
+
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* 统一控制间距 */
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--zcy-border);
+  border-radius: 8px;
+  color: var(--zcy-text);
+  padding: 14px 16px;
+  font-size: 16px;
+  outline: none;
+  transition: all 0.3s ease;
+
+  &::placeholder {
+    color: var(--zcy-muted);
+  }
+
+  &:focus {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: var(--zcy-border-focus);
+    box-shadow: 0 0 0 3px rgba(113, 112, 255, 0.15);
+  }
+
+  /* 核心修复：解决浏览器自动填充导致的恶心白框和黄框 */
+  &:-webkit-autofill,
+  &:-webkit-autofill:hover,
+  &:-webkit-autofill:focus,
+  &:-webkit-autofill:active {
+    -webkit-transition: "color 9999s ease-out, background-color 9999s ease-out";
+    -webkit-transition-delay: 9999s;
+    -webkit-text-fill-color: var(--zcy-text) !important;
+  }
+}
+
+.passwordWrap {
+  position: relative;
+}
+
+.passwordWrap .input {
+  padding-right: 44px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--zcy-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+}
+
+.eyeBtn:hover {
+  color: var(--zcy-dim);
+}
+
+.error {
+  color: #ff4d4f;
+  font-size: 13px;
+  margin: -4px 0 0;
+  text-align: center;
+  animation: shake 0.3s ease-in-out;
+}
+
+.btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px 16px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--zcy-accent-deep) 0%, var(--zcy-accent) 55%, var(--zcy-accent-hover) 100%);
+  box-shadow: 0 8px 24px rgba(94, 106, 210, 0.4);
+  transition: all 0.2s ease;
+  text-indent: 0.35em; /* 修复 letter-spacing 导致的文字视觉不居中 */
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px rgba(94, 106, 210, 0.5);
+    filter: brightness(1.1);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: 0 4px 16px rgba(94, 106, 210, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+.switchRow {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--zcy-muted);
+}
+
+.switchBtn {
+  border: none;
+  background: transparent;
+  color: var(--zcy-accent-hover);
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+}
+
+.switchBtn:hover {
+  text-decoration: underline;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}

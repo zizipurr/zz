@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+
+ignoredBuiltDependencies:
+  - '@scarf/scarf'
+  - core-js
+  - core-js-pure
+  - esbuild
+  - vue-demi

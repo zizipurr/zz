@@ -1,0 +1,36 @@
+.outer {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-canvas);
+}
+
+.inner {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 在桌面端维持整体视口锁定，各面板内部滚动 */
+}
+
+/* 小屏端允许页面滚动 */
+@media (max-width: 1023.98px) {
+  .outer, .inner, .content {
+    flex: none;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(grep -E \"\\(pnpm-workspace|^[^/]*package\\\\.json$\\)\")",
+      "Bash(xargs cat:*)",
+      "Bash(npm view:*)",
+      "Bash(rm -f vite.config.ts index.html src/main.tsx src/App.tsx src/vite-env.d.ts)",
+      "Bash(rm -rf src/api src/store)",
+      "Bash(rm -f src/styles/global.scss)",
+      "Bash(rmdir src/styles)",
+      "Bash(rm -f src/pages/Login/Login.module.scss src/pages/Login/index.tsx src/pages/Orders/Orders.module.scss src/pages/Orders/index.tsx src/pages/OrderDetail/OrderDetail.module.scss src/pages/OrderDetail/index.tsx src/pages/ReportEvent/ReportEvent.module.scss src/pages/ReportEvent/index.tsx)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm approve-builds:*)"
+    ]
+  }
+}

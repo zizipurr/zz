@@ -1,0 +1,30 @@
+{
+  "name": "zcy-platform",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:api": "pnpm --filter @zcy/api build",
+    "build:api:deploy": "rm -rf apps/api/dist && pnpm --filter @zcy/api deploy --prod --legacy apps/api/dist && pnpm build:api",
+    "build:ioc-dashboard": "pnpm --filter @zcy/ioc-dashboard build",
+    "prepare": "husky"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.28.0",
+  "devDependencies": {
+    "@commitlint/config-conventional": "^20.5.0",
+    "commitlint": "20.5.0",
+    "husky": "^9.1.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "core-js",
+      "core-js-pure",
+      "vue-demi",
+      "@scarf/scarf"
+    ]
+  }
+}
