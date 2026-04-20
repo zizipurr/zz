@@ -134,6 +134,12 @@ pnpm --filter api migration:revert
 pnpm --filter api migration:show
 ```
 
+**命令约束：禁止使用 `npx typeorm ...`。如需直接调用 TypeORM CLI，必须用项目脚本（确保 `@/` 别名在 CLI 场景下也可解析）：**
+
+```bash
+pnpm --filter @zcy/api typeorm -- -d src/db/data-source.ts migration:run
+```
+
 **注意：禁止使用 `synchronize: true`，所有表结构变更必须通过 migration 管理。**
 
 ## 种子数据

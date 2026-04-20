@@ -2,7 +2,7 @@ import { EventStatus, EventLevel, MessageType } from '@/common/enums'
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository, MoreThanOrEqual } from 'typeorm'
-import { Event } from './event.entity'
+import { Event, EventScene } from './event.entity'
 import { MessageGateway } from '@/modules/message/message.gateway'
 import { MessageService } from '@/modules/message/message.service'
 import { UserService } from '@/modules/user/user.service'
@@ -16,13 +16,14 @@ export class EventService {
     private userService: UserService,
   ) {}
 
-  findAll(user?: any, query?: { level?: string; status?: string }) {
+  findAll(user?: any, query?: { level?: string; status?: string; scene?: EventScene }) {
     const qb = this.repo.createQueryBuilder('event')
       .orderBy('event.createdAt', 'DESC')
 
     // 按 level/status 过滤（保留原有功能）
     if (query?.level) qb.andWhere('event.level = :level', { level: query.level })
     if (query?.status) qb.andWhere('event.status = :status', { status: query.status })
+    if (query?.scene) qb.andWhere('event.scene = :scene', { scene: query.scene })
 
     // 没有 user 时返回全部（兼容 KPI 等无 user 上下文的调用）
     if (!user) return qb.getMany()
@@ -74,9 +75,40 @@ export class EventService {
     return this.repo.findOne({ where: { id } })
   }
 
+  private displayName(user?: { realName?: string | null; nickname?: string | null; username?: string | null } | null) {
+    return user?.realName || user?.nickname || user?.username || null
+  }
+
+  async findDetailById(id: number) {
+    const event = await this.findById(id)
+    if (!event) return null
+
+    const [reporter, dispatcherUser, assigneeUser] = await Promise.all([
+      event.reporterId ? this.userService.findById(event.reporterId) : Promise.resolve(null),
+      event.dispatcher ? this.userService.findByUsername(event.dispatcher) : Promise.resolve(null),
+      event.assignee ? this.userService.findByUsername(event.assignee) : Promise.resolve(null),
+    ])
+
+    const reporterName = this.displayName(reporter)
+    const dispatcherName = this.displayName(dispatcherUser)
+    const assigneeName = this.displayName(assigneeUser)
+
+    return {
+      ...event,
+      timeline: [
+        { action: 'created', time: event.createdAt ?? null, actorName: reporterName },
+        { action: 'dispatched', time: event.dispatchedAt ?? null, actorName: dispatcherName },
+        { action: 'started', time: event.startedAt ?? null, actorName: assigneeName },
+        { action: 'completed', time: event.completedAt ?? null, actorName: assigneeName },
+      ],
+      result: event.completionResult ?? null,
+    }
+  }
+
   async create(dto: any, user?: any): Promise<Event> {
     const entity = this.repo.create({
       ...dto,
+      scene: dto.scene || EventScene.IOC,
       tenantId: dto.tenantId || user?.tenantId || 'shenzhen',
       district: dto.district || user?.district,
       reporterId: user?.userId,
@@ -109,13 +141,24 @@ export class EventService {
         status: EventStatus.PENDING,
         assignee: null,
         remark: null,
+        dispatcher: null,
+        dispatchedAt: null,
+        startedAt: null,
+        completedAt: null,
+        completionResult: null,
       })
       .execute()
     return { success: true }
   }
 
-  async dispatch(id: number, assignee: string, remark: string) {
-    await this.repo.update(id, { assignee, remark, status: EventStatus.DOING })
+  async dispatch(id: number, assignee: string, remark: string, dispatcher?: string) {
+    await this.repo.update(id, {
+      assignee,
+      remark,
+      status: EventStatus.DOING,
+      dispatcher: dispatcher || null,
+      dispatchedAt: new Date(),
+    })
 
     // 状态变更广播给所有客户端（大屏/列表刷新用）
     this.messageGateway.server?.emit('event_updated', { type: 'status_change', id, status: EventStatus.DOING })
@@ -147,12 +190,31 @@ export class EventService {
     return event
   }
 
-  async complete(id: number, completerUsername?: string) {
+  async start(id: number, starterUsername?: string) {
     const event = await this.findById(id)
-    const update: Partial<Event> = { status: EventStatus.DONE }
+    if (!event) return null
+    const assignee = starterUsername || event.assignee || null
+    await this.repo.update(id, {
+      status: EventStatus.DOING,
+      assignee,
+      startedAt: event.startedAt ?? new Date(),
+    })
+    this.messageGateway.server?.emit('event_updated', { type: 'status_change', id, status: EventStatus.DOING })
+    return this.findById(id)
+  }
+
+  async complete(id: number, completerUsername?: string, completionResult?: string) {
+    const event = await this.findById(id)
+    const update: Partial<Event> = { status: EventStatus.DONE, completedAt: new Date() }
     // 若事件还没有 assignee（未经派单直接完结），记录完结人
     if (completerUsername && !event?.assignee) {
       update.assignee = completerUsername
+    }
+    if (completionResult !== undefined) {
+      update.completionResult = completionResult
+    }
+    if (!event?.startedAt) {
+      update.startedAt = new Date()
     }
     await this.repo.update(id, update)
     this.messageGateway.server?.emit('event_updated', { id, status: EventStatus.DONE })

@@ -53,8 +53,9 @@ export function useSocket() {
       setTimeout(() => setToastVisible(false), 3000)
     })
 
-    socket.on('event_updated', () => {
+    socket.on('event_updated', (payload?: { id?: number; status?: string; type?: string }) => {
       window.dispatchEvent(new CustomEvent('refresh_events'))
+      window.dispatchEvent(new CustomEvent('event_updated_payload', { detail: payload ?? null }))
     })
 
     return () => { socket.disconnect() }

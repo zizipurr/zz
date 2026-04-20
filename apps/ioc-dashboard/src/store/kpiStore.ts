@@ -11,6 +11,15 @@ export interface KpiSummary {
   alerts: number
   events?: { total: number; pending: number; doing: number; done: number }
   messages?: { unread: number }
+  // 交通场景附加字段
+  trafficTotal?: number
+  trafficAnomaly?: number
+  trafficOnline?: number
+  trafficAnomalyLabel?: string
+  // 应急场景附加字段
+  highLevel?: number
+  midLevel?: number
+  lowLevel?: number
 }
 
 const emptyKpi: KpiSummary = {
@@ -25,16 +34,16 @@ const emptyKpi: KpiSummary = {
 interface KpiState {
   kpi: KpiSummary
   loading: boolean
-  fetchKpi: () => Promise<void>
+  fetchKpi: (opts?: { scene?: string }) => Promise<void>
 }
 
 export const useKpiStore = create<KpiState>((set) => ({
   kpi: emptyKpi,
   loading: false,
-  fetchKpi: async () => {
+  fetchKpi: async (opts) => {
     set({ loading: true })
     try {
-      const { data } = await request.get<KpiSummary>('/kpi/summary')
+      const { data } = await request.get<KpiSummary>('/kpi/summary', { params: opts })
       set({ kpi: { ...emptyKpi, ...data }, loading: false })
     } catch {
       set({ loading: false })

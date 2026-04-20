@@ -11,6 +11,9 @@
     "build:canary": "vite build --mode canary",
     "build:prod": "vite build --mode prod",
     "lint": "eslint .",
+    "test": "vitest run",
+    "e2e": "playwright test e2e/runtime-replay.spec.ts",
+    "e2e:ui": "playwright test --ui e2e/runtime-replay.spec.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -25,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -36,6 +40,7 @@
     "sass": "^1.99.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
-    "vite": "^8.0.4"
+    "vite": "^8.0.4",
+    "vitest": "^3.2.4"
   }
 }

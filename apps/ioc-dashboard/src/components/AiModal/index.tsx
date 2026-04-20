@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import styles from './AiModal.module.scss'
 
 interface Props {
@@ -16,7 +17,7 @@ export default function AiModal({ summary, onClose, onSendComingSoon }: Props) {
     setQuestion('')
   }
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.box} onClick={e => e.stopPropagation()}>
         <div className={styles.header}>
@@ -37,6 +38,7 @@ export default function AiModal({ summary, onClose, onSendComingSoon }: Props) {
           <button type="button" className={styles.sendBtn} onClick={handleSend}>发送</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

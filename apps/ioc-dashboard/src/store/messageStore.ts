@@ -40,7 +40,8 @@ export const useMessageStore = create<MessageState>((set) => ({
     set({ loading: true })
     try {
       const { data } = await request.get('/messages')
-      set({ messages: data, loading: false })
+      const list = Array.isArray(data) ? data : (data?.list ?? [])
+      set({ messages: list, loading: false })
     } catch (err) {
       if (isUnauthorized(err)) {
         set({ messages: [], unreadCount: 0, loading: false })
@@ -71,12 +72,14 @@ export const useMessageStore = create<MessageState>((set) => ({
     await request.post(`/messages/${id}/read`)
     const { data } = await request.get('/messages')
     const { data: u } = await request.get('/messages/unread')
-    set({ messages: data, unreadCount: u.count })
+    const list = Array.isArray(data) ? data : (data?.list ?? [])
+    set({ messages: list, unreadCount: u.count })
   },
   markAllRead: async () => {
     if (!hasToken()) return
     await request.post('/messages/read-all')
     const { data } = await request.get('/messages')
-    set({ messages: data, unreadCount: 0 })
+    const list = Array.isArray(data) ? data : (data?.list ?? [])
+    set({ messages: list, unreadCount: 0 })
   },
 }))

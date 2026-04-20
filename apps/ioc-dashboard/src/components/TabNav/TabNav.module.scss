@@ -18,19 +18,32 @@
 }
 
 .tab {
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px 20px;
   font-size: 13px;
   font-family: var(--font-display);
   letter-spacing: 1px;
   color: var(--text-secondary);
+  text-decoration: none;
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.2s;
   white-space: nowrap;
+  line-height: 1;
 
   &:hover {
     color: var(--text-primary);
     background: color-mix(in srgb, var(--text-primary) 3%, transparent);
+  }
+
+  &:visited,
+  &:active {
+    color: var(--text-secondary);
+    text-decoration: none;
   }
 
   &.active {
@@ -40,7 +53,7 @@
   }
 }
 
-::global(html.dark) .tab:not(.active):hover {
+:global(html.dark) .tab:not(.active):hover {
   background: color-mix(in srgb, var(--on-accent) 5%, transparent);
 }
 

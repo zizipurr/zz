@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import MainLayout from './layouts/MainLayout'
 import Dashboard from './pages/Dashboard'
+import MessagesPage from './pages/Messages'
 
 // 只能使用小程序、不允许进大屏的角色
 const MINIPROGRAM_ONLY_ROLES = [
@@ -39,6 +40,11 @@ export default function App() {
           <Route path="/" element={<RequireAuth><MainLayout /></RequireAuth>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="community" element={<Dashboard />} />
+            <Route path="emergency" element={<Dashboard />} />
+            <Route path="traffic" element={<Dashboard />} />
+            <Route path="service" element={<Dashboard />} />
+            <Route path="messages" element={<MessagesPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

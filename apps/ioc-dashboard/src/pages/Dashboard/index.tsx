@@ -3,13 +3,20 @@ import DemoConsole from "@/components/DemoConsole";
 import DispatchModal from "@/components/DispatchModal";
 import KpiBar from "@/components/KpiBar";
 import TxMap from "@/components/TxMap";
+import RightPanel from "@/components/RightPanel";
 import { useSocket } from "@/hooks/useSocket";
 import { useEventStore } from "@/store/eventStore";
 import { useKpiStore } from "@/store/kpiStore";
 import { useMessageStore } from "@/store/messageStore";
+import { sceneConfig, getSceneIdByPath, type SceneId } from "@/config/sceneConfig";
 import * as echarts from "echarts";
-import { CheckCircle2, Inbox, MessageSquare } from "lucide-react";
+import { CheckCheck, CheckCircle2, Eye, Inbox, MessageSquare } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useSceneStore } from "@/stores/sceneStore";
+import { getSceneKeyByPath } from "@/config/sceneConfig";
+import { useSceneData } from "@/hooks/useSceneData";
+import request from "@/api/request";
 import styles from "./Dashboard.module.scss";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -18,9 +25,7 @@ const STATUS_LABELS: Record<string, string> = {
   done: "已完结",
 };
 
-type EventLike = { status?: string };
-type ScenePill = { key: string; name: string; value: string; icon: string };
-
+type EventLike = { status?: string; level?: string };
 // 辅助 Hook：监听 html 的 dark class 变化，通知图表重新渲染
 function useThemeObserver(callback: (isDark: boolean) => void) {
   useEffect(() => {
@@ -56,8 +61,51 @@ const getVar = (name: string, isDark: boolean) => {
   return '#ccc';
 };
 
-// ===== 事件趋势折线图 =====
-function TrendChart({ events }: { events: EventLike[] }) {
+type ChartType = "trend7d" | "workorderTrend" | "alertTrend" | "trafficFlow" | "serviceVolume";
+
+function buildTrendData(chartType: ChartType, events: EventLike[]) {
+  if (chartType === "workorderTrend") {
+    const pending = events.filter((e) => e.status === "pending").length;
+    const doing = events.filter((e) => e.status === "doing").length;
+    const done = events.filter((e) => e.status === "done").length;
+    return {
+      x: ["周一", "周二", "周三", "周四", "周五", "周六", "今天"],
+      y: [pending + 6, pending + 4, doing + 3, doing + 5, done + 2, done + 3, pending + doing + done],
+      seriesName: "社区工单趋势",
+    };
+  }
+  if (chartType === "alertTrend") {
+    const high = events.filter((e) => e.level === "high").length;
+    const mid = events.filter((e) => e.level === "mid").length;
+    return {
+      x: ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "现在"],
+      y: [2, 1, 3, mid + 2, high + 2, high + mid + 1, high + mid],
+      seriesName: "应急告警趋势",
+    };
+  }
+  if (chartType === "trafficFlow") {
+    return {
+      x: ["06", "08", "10", "12", "14", "16", "18", "20", "22"],
+      y: [24, 56, 72, 64, 58, 77, 84, 63, 40],
+      seriesName: "交通流量曲线",
+    };
+  }
+  if (chartType === "serviceVolume") {
+    return {
+      x: ["周一", "周二", "周三", "周四", "周五", "周六", "周日"],
+      y: [210, 248, 233, 286, 302, 190, 178],
+      seriesName: "办件量曲线",
+    };
+  }
+  return {
+    x: ["4/2", "4/3", "4/4", "4/5", "4/6", "4/7", "今天"],
+    y: [8, 12, 7, 15, 10, 18, events.length],
+    seriesName: "全域事件趋势",
+  };
+}
+
+// ===== 场景趋势图（按 cfg.chartConfig.type 切换） =====
+function TrendChart({ events, chartType }: { events: EventLike[]; chartType: ChartType }) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
 
@@ -68,14 +116,14 @@ function TrendChart({ events }: { events: EventLike[] }) {
     const accentColor = getVar('--accent-color', isDark);
     const textColor = getVar('--text-secondary', isDark);
     const borderColor = getVar('--border-glass', isDark);
-    const days = ["4/2", "4/3", "4/4", "4/5", "4/6", "4/7", "今天"];
+    const { x, y, seriesName } = buildTrendData(chartType, events);
 
     chart.setOption({
       backgroundColor: "transparent",
       grid: { top: 20, right: 10, bottom: 24, left: 30 },
       xAxis: {
         type: "category",
-        data: days,
+        data: x,
         axisLine: { lineStyle: { color: borderColor } },
         axisLabel: { color: textColor, fontSize: 10, fontFamily: 'Rajdhani, sans-serif' },
         axisTick: { show: false },
@@ -87,7 +135,8 @@ function TrendChart({ events }: { events: EventLike[] }) {
       },
       series: [
         {
-          data: [8, 12, 7, 15, 10, 18, events.length],
+          name: seriesName,
+          data: y,
           type: "line",
           smooth: true,
           symbol: "circle",
@@ -114,7 +163,7 @@ function TrendChart({ events }: { events: EventLike[] }) {
         textStyle: { color: isDark ? '#e8f4f8' : '#1e293b', fontSize: 12 },
       },
     }, true);
-  }, [events.length]);
+  }, [chartType, events]);
 
   useEffect(() => {
     const el = ref.current;
@@ -131,7 +180,7 @@ function TrendChart({ events }: { events: EventLike[] }) {
 }
 
 // ===== 工单处置率环形图 =====
-function DisposeChart({ events }: { events: EventLike[] }) {
+function DisposeChart({ events, chartType }: { events: EventLike[]; chartType: ChartType }) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
 
@@ -144,9 +193,144 @@ function DisposeChart({ events }: { events: EventLike[] }) {
     const done = events.filter((e) => e.status === "done").length;
     const doing = events.filter((e) => e.status === "doing").length;
     const pending = events.filter((e) => e.status === "pending").length;
+    const high = events.filter((e) => e.level === "high").length;
+    const mid = events.filter((e) => e.level === "mid").length;
+    const low = events.filter((e) => e.level === "low").length;
     const total = events.length || 1;
     const rate = Math.round((done / total) * 100);
+    const commonTooltip = {
+      backgroundColor: isDark ? "rgba(10,20,40,0.9)" : "rgba(255,255,255,0.9)",
+      borderColor: getVar('--border-glass', isDark),
+      textStyle: { color: isDark ? '#e8f4f8' : '#1e293b', fontSize: 12 },
+    };
 
+    if (chartType === "workorderTrend") {
+      chart.setOption({
+        backgroundColor: "transparent",
+        grid: { top: 24, right: 10, bottom: 20, left: 28 },
+        xAxis: {
+          type: "category",
+          data: ["待处理", "处理中", "已完结"],
+          axisLabel: { color: textColor, fontSize: 11 },
+          axisLine: { lineStyle: { color: getVar('--border-glass', isDark) } },
+          axisTick: { show: false },
+        },
+        yAxis: {
+          type: "value",
+          splitLine: { lineStyle: { color: getVar('--border-glass', isDark), type: "dashed" } },
+          axisLabel: { color: textColor, fontSize: 10 },
+        },
+        series: [
+          {
+            type: "bar",
+            barWidth: 18,
+            data: [
+              { value: pending, itemStyle: { color: "#ef4444" } },
+              { value: doing, itemStyle: { color: "#f59e0b" } },
+              { value: done, itemStyle: { color: "#10b981" } },
+            ],
+          },
+        ],
+        tooltip: commonTooltip,
+      }, true);
+      return;
+    }
+
+    if (chartType === "alertTrend") {
+      chart.setOption({
+        backgroundColor: "transparent",
+        series: [
+          {
+            type: "pie",
+            radius: ["52%", "72%"],
+            center: ["40%", "50%"],
+            data: [
+              { value: high, name: "高危", itemStyle: { color: "#ef4444" } },
+              { value: mid, name: "中危", itemStyle: { color: "#f59e0b" } },
+              { value: low, name: "低危", itemStyle: { color: "#22d3ee" } },
+            ],
+            label: { show: false },
+          },
+        ],
+        legend: {
+          orient: "vertical",
+          right: "0%",
+          top: "center",
+          textStyle: { color: textColor, fontSize: 11 },
+          formatter: (name: string) => `${name}  ${name === "高危" ? high : name === "中危" ? mid : low}`,
+        },
+        tooltip: commonTooltip,
+      }, true);
+      return;
+    }
+
+    if (chartType === "trafficFlow") {
+      chart.setOption({
+        backgroundColor: "transparent",
+        grid: { top: 18, right: 6, bottom: 18, left: 40 },
+        xAxis: {
+          type: "value",
+          axisLabel: { color: textColor, fontSize: 10 },
+          splitLine: { lineStyle: { color: getVar('--border-glass', isDark), type: "dashed" } },
+        },
+        yAxis: {
+          type: "category",
+          data: ["高危", "中危", "低危"],
+          axisLabel: { color: textColor, fontSize: 11 },
+          axisLine: { lineStyle: { color: getVar('--border-glass', isDark) } },
+          axisTick: { show: false },
+        },
+        series: [
+          {
+            type: "bar",
+            barWidth: 14,
+            data: [
+              { value: high, itemStyle: { color: "#ef4444" } },
+              { value: mid, itemStyle: { color: "#f59e0b" } },
+              { value: low, itemStyle: { color: "#38bdf8" } },
+            ],
+          },
+        ],
+        tooltip: commonTooltip,
+      }, true);
+      return;
+    }
+
+    if (chartType === "serviceVolume") {
+      const p1 = Math.round((pending / total) * 100);
+      const p2 = Math.round((doing / total) * 100);
+      const p3 = Math.round((done / total) * 100);
+      chart.setOption({
+        backgroundColor: "transparent",
+        grid: { top: 20, right: 8, bottom: 20, left: 32 },
+        xAxis: {
+          type: "category",
+          data: ["待受理", "办理中", "已完结"],
+          axisLabel: { color: textColor, fontSize: 10 },
+          axisTick: { show: false },
+          axisLine: { lineStyle: { color: getVar('--border-glass', isDark) } },
+        },
+        yAxis: {
+          type: "value",
+          axisLabel: { color: textColor, fontSize: 10 },
+          splitLine: { lineStyle: { color: getVar('--border-glass', isDark), type: "dashed" } },
+        },
+        series: [
+          {
+            type: "line",
+            smooth: true,
+            data: [p1, p2, p3],
+            symbolSize: 6,
+            lineStyle: { color: accentColor, width: 2 },
+            itemStyle: { color: accentColor },
+          },
+        ],
+        tooltip: commonTooltip,
+      }, true);
+      return;
+    }
+
+    // overview 默认：处置率环图
     chart.setOption({
       backgroundColor: "transparent",
       series: [
@@ -187,13 +371,9 @@ function DisposeChart({ events }: { events: EventLike[] }) {
           return `${name}  ${map[name]}`;
         },
       },
-      tooltip: {
-        backgroundColor: isDark ? "rgba(10,20,40,0.9)" : "rgba(255,255,255,0.9)",
-        borderColor: getVar('--border-glass', isDark),
-        textStyle: { color: isDark ? '#e8f4f8' : '#1e293b', fontSize: 12 },
-      },
+      tooltip: commonTooltip,
     }, true);
-  }, [events]);
+  }, [chartType, events]);
 
   useEffect(() => {
     const el = ref.current;
@@ -210,9 +390,12 @@ function DisposeChart({ events }: { events: EventLike[] }) {
 }
 
 export default function Dashboard() {
-  const { events, fetchEvents, selectEvent, selectedEvent, loading: eventsLoading } = useEventStore();
-  const kpi = useKpiStore((s) => s.kpi);
-  const fetchKpi = useKpiStore((s) => s.fetchKpi);
+  const {
+    events,
+    selectEvent,
+    selectedEvent,
+    loading: eventsLoading,
+  } = useEventStore();
   const {
     messages,
     unreadCount,
@@ -222,61 +405,121 @@ export default function Dashboard() {
     markAllRead,
     loading: messagesLoading,
   } = useMessageStore();
+  const kpi = useKpiStore((s) => s.kpi);
   const { toastVisible } = useSocket();
-  const [activeScene, setActiveScene] = useState("智慧交通");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const setSceneSilent = useSceneStore((s) => s.setSceneSilent);
+  const { activeScene, cfg, kpis, events: sceneEvents } = useSceneData();
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiToastVisible, setAiToastVisible] = useState(false);
   
-  const pendingAlerts = useMemo(() => events.filter((e) => e.status !== "done"), [events]);
-  const pendingEventCount = useMemo(() => events.filter((e) => e.status === "pending").length, [events]);
-  const criticalAlerts = useMemo(() => events.filter((e) => e.level === "high" && e.status !== "done"), [events]);
-  const highEvent = useMemo(() => events.find((e) => e.level === "high" && e.status === "pending"), [events]);
-  
+  const pendingAlerts = useMemo(() => sceneEvents.filter((e) => e.status !== "done"), [sceneEvents]);
+  const pendingEventCount = useMemo(() => sceneEvents.filter((e) => e.status === "pending").length, [sceneEvents]);
+  const doingEventCount = useMemo(() => sceneEvents.filter((e) => e.status === "doing").length, [sceneEvents]);
+  const doneEventCount = useMemo(() => sceneEvents.filter((e) => e.status === "done").length, [sceneEvents]);
+  const criticalAlerts = useMemo(() => sceneEvents.filter((e) => e.level === "high" && e.status !== "done"), [sceneEvents]);
+  const highEvent = useMemo(() => sceneEvents.find((e) => e.level === "high" && e.status === "pending"), [sceneEvents]);
+  const highCount = useMemo(() => criticalAlerts.length, [criticalAlerts]);
+  const midCount = useMemo(() => sceneEvents.filter((e) => e.level === "mid" && e.status !== "done").length, [sceneEvents]);
+  const lowCount = useMemo(() => sceneEvents.filter((e) => e.level === "low" && e.status !== "done").length, [sceneEvents]);
+  const currentSceneId = useMemo<SceneId>(
+    () => getSceneIdByPath(location.pathname),
+    [location.pathname]
+  );
+  const currentScene = sceneConfig[currentSceneId];
+
   const aiModalSummary = useMemo(() => {
-    if (!highEvent) return "🤖 当前无高危待处理事件，系统运行正常。";
-    return `🤖 已同步当前告警：${highEvent.location} · ${highEvent.title}，建议立即派遣处置。`;
-  }, [highEvent]);
+    if (!highEvent) return `🤖 ${cfg.label}当前无高危待处理事件，系统运行正常。`;
+    return `🤖 已同步${cfg.label}告警：${highEvent.location} · ${highEvent.title}，建议立即派遣处置。`;
+  }, [highEvent, cfg.label]);
 
-  const scenePills: ScenePill[] = useMemo(() => [
-    { key: "traffic", name: "智慧交通", value: kpi.traffic.toLocaleString("zh-CN"), icon: "🚗" },
-    { key: "community", name: "智慧社区", value: kpi.residents.toLocaleString("zh-CN"), icon: "🏘" },
-    { key: "emergency", name: "城安应急", value: `${kpi.alerts}件`, icon: "🚨" },
-    { key: "service", name: "城市服务", value: "在线", icon: "🏛" },
-  ], [kpi.traffic, kpi.residents, kpi.alerts]);
+  // 已移除中间“关键指标条”（与顶部 KPI 重复）
 
-  const fetchEventsRef = useRef(fetchEvents);
+  const sceneGovRows = useMemo(() => {
+    const rowsByScene: Record<
+      SceneId,
+      Array<{ val: string; label: string; tone: "cyan" | "green" | "amber" | "text" }>
+    > = {
+      overview: [
+        { val: "24", label: "网格数", tone: "cyan" },
+        { val: "138", label: "网格员", tone: "green" },
+        { val: String(pendingEventCount), label: "待处理事件", tone: "amber" },
+        { val: "96%", label: "满意度", tone: "text" },
+      ],
+      community: [
+        { val: kpi.residents.toLocaleString("zh-CN"), label: "住户数", tone: "green" },
+        { val: String(sceneEvents.length), label: "社区事件", tone: "cyan" },
+        { val: String(sceneEvents.filter((e) => e.status === "pending").length), label: "待处理", tone: "amber" },
+        { val: "95%", label: "工单满意度", tone: "text" },
+      ],
+      emergency: [
+        { val: String(sceneEvents.length), label: "应急事件", tone: "amber" },
+        { val: String(sceneEvents.filter((e) => e.level === "high").length), label: "高危告警", tone: "green" },
+        { val: String(sceneEvents.filter((e) => e.status === "pending").length), label: "待处置", tone: "cyan" },
+        { val: "8m", label: "平均响应", tone: "text" },
+      ],
+      traffic: [
+        { val: kpi.traffic.toLocaleString("zh-CN"), label: "监控接口", tone: "cyan" },
+        { val: String(sceneEvents.length), label: "交通事件", tone: "amber" },
+        { val: "23%", label: "拥堵指数", tone: "green" },
+        { val: "88%", label: "设备在线率", tone: "text" },
+      ],
+      service: [
+        { val: "1,204", label: "办件总量", tone: "text" },
+        { val: "82%", label: "在线办理率", tone: "green" },
+        { val: "530", label: "缴费笔数", tone: "cyan" },
+        { val: String(sceneEvents.length), label: "服务事件", tone: "amber" },
+      ],
+    };
+    return rowsByScene[currentSceneId];
+  }, [currentSceneId, kpi.residents, kpi.traffic, pendingEventCount, sceneEvents]);
+
   const fetchMessagesRef = useRef(fetchMessages);
   const fetchUnreadCountRef = useRef(fetchUnreadCount);
-  const fetchKpiRef = useRef(fetchKpi);
-
-  useEffect(() => { fetchEventsRef.current = fetchEvents; }, [fetchEvents]);
   useEffect(() => { fetchMessagesRef.current = fetchMessages; }, [fetchMessages]);
   useEffect(() => { fetchUnreadCountRef.current = fetchUnreadCount; }, [fetchUnreadCount]);
-  useEffect(() => { fetchKpiRef.current = fetchKpi; }, [fetchKpi]);
 
   useEffect(() => {
-    function syncDashboard() {
-      fetchEventsRef.current();
+    // 路由 -> 场景（单一数据源：sceneStore）
+    const key = getSceneKeyByPath(location.pathname);
+    setSceneSilent(key);
+  }, [location.pathname, setSceneSilent]);
+
+  useEffect(() => {
+    const openEventId = Number((location.state as { openEventId?: number } | null)?.openEventId ?? 0);
+    if (!openEventId) return;
+    void request
+      .get(`/events/${openEventId}`)
+      .then(({ data }) => {
+        if (data?.id) selectEvent(data);
+      })
+      .finally(() => {
+        navigate(location.pathname, { replace: true, state: null });
+      });
+  }, [location.pathname, location.state, navigate, selectEvent]);
+
+  useEffect(() => {
+    function onRefresh() {
+      // useSceneData 内部已经按 activeScene 拉取 events/kpi
       fetchMessagesRef.current();
       fetchUnreadCountRef.current();
-      void fetchKpiRef.current();
     }
-    syncDashboard();
-    function onRefresh() { syncDashboard(); }
     window.addEventListener("refresh_events", onRefresh);
-    // 租户切换时刷新所有数据
     window.addEventListener("tenant_changed", onRefresh);
-    function onVisible() { if (!document.hidden) syncDashboard(); }
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", syncDashboard);
     return () => {
       window.removeEventListener("refresh_events", onRefresh);
       window.removeEventListener("tenant_changed", onRefresh);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", syncDashboard);
     };
   }, []);
+
+  // 切换场景时：动态写入主题色，让大屏“换场景立刻换氛围”
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--accent-color", currentScene.accentColor);
+    root.style.setProperty("--accent-hover", currentScene.accentColor);
+  }, [currentScene.accentColor]);
 
   useEffect(() => {
     const openAlertCenter = () => setAlertModalOpen(true);
@@ -303,9 +546,37 @@ export default function Dashboard() {
     selectEvent(ev);
   }
 
+  const trendTitle = useMemo(() => {
+    const map: Record<ChartType, string> = {
+      trend7d: "全域事件趋势（近7日）",
+      workorderTrend: "社区工单趋势",
+      alertTrend: "应急告警趋势",
+      trafficFlow: "交通流量曲线（静态）",
+      serviceVolume: "办件量趋势（静态）",
+    };
+    return map[cfg.chartConfig.type as ChartType] ?? "事件趋势（近7日）";
+  }, [cfg.chartConfig.type]);
+
+  const secondaryChartTitle = useMemo(() => {
+    const map: Record<ChartType, string> = {
+      trend7d: "工单处置率",
+      workorderTrend: "社区处置结构",
+      alertTrend: "告警等级占比",
+      trafficFlow: "路口异常分布",
+      serviceVolume: "服务转化效率（%）",
+    };
+    return map[cfg.chartConfig.type as ChartType] ?? "工单处置率";
+  }, [cfg.chartConfig.type]);
+
   return (
     <div className={styles.dashboardPage}>
-      <KpiBar />
+      <KpiBar kpis={kpis.map(k => ({
+        label: k.label,
+        value: String(k.value ?? "--"),
+        trend: k.trend ?? "",
+        unit: k.unit,
+        alert: k.alert,
+      }))} />
 
       <div className={styles.body}>
         {/* ===== 左侧面板 ===== */}
@@ -314,24 +585,26 @@ export default function Dashboard() {
             <div className={styles.panelHeader}>
               <div className={styles.panelTitle}>事件聚合中心</div>
               <div className={styles.panelActions}>
-                <span className={styles.panelAction}>全部 →</span>
+                <span className={styles.panelAction}>
+                  {currentSceneId === "overview" ? "全部 →" : `${currentScene.label} →`}
+                </span>
               </div>
             </div>
             <div className={styles.eventList}>
-              {eventsLoading && events.length === 0 ? (
+              {eventsLoading && sceneEvents.length === 0 ? (
                 <div className={styles.listEmpty} aria-busy="true">
                   <div className={styles.listEmptyPulse} />
                   <div className={styles.listEmptyTitle}>正在同步事件</div>
                   <div className={styles.listEmptyHint}>请稍候，工单列表加载完成后将显示在此处</div>
                 </div>
-              ) : events.length === 0 ? (
+              ) : sceneEvents.length === 0 ? (
                 <div className={styles.listEmpty}>
                   <Inbox className={styles.listEmptyIcon} strokeWidth={1.25} aria-hidden />
-                  <div className={styles.listEmptyTitle}>暂无事件</div>
-                  <div className={styles.listEmptyHint}>当前租户下没有工单数据</div>
+                  <div className={styles.listEmptyTitle}>当前场景暂无事件</div>
+                  <div className={styles.listEmptyHint}>可切换到总览查看全部工单数据</div>
                 </div>
               ) : (
-                events.map((ev) => (
+                sceneEvents.map((ev) => (
                   <div
                     key={ev.id}
                     className={`${styles.eventItem} ${selectedEvent?.id === ev.id ? styles.active : ""} ${ev.status === "done" ? styles.done : ""}`}
@@ -356,7 +629,14 @@ export default function Dashboard() {
               <div className={styles.panelTitle}>消息中心</div>
               <div className={styles.panelActions}>
                 {unreadCount > 0 && <span className={styles.unreadBadge}>{unreadCount} 未读</span>}
-                <span className={styles.panelAction} onClick={() => markAllRead()}>全部已读</span>
+                {/* <button type="button" className={styles.panelActionIconBtn} onClick={() => markAllRead()}>
+                  <CheckCheck size={12} strokeWidth={1.8} />
+                  <span>全部已读</span>
+                </button> */}
+                <button type="button" className={styles.panelActionIconBtn} onClick={() => navigate("/messages")}>
+                  {/* <Eye size={12} strokeWidth={1.8} /> */}
+                  <span>查看全部 →</span>
+                </button>
               </div>
             </div>
             <div className={styles.msgList}>
@@ -389,110 +669,114 @@ export default function Dashboard() {
 
         {/* ===== 中间核心区 ===== */}
         <div className={styles.center}>
-          <div className={styles.scenePills}>
-            {scenePills.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                className={`${styles.scenePill} ${activeScene === item.name ? styles.active : ""}`}
-                onClick={() => setActiveScene(item.name)}
-              >
-                <span className={styles.scenePillIcon}>{item.icon}</span>
-                <div className={styles.scenePillName}>{item.name}</div>
-                <div className={styles.scenePillVal}>{item.value}</div>
-              </button>
-            ))}
-          </div>
-
-          <TxMap />
+          <TxMap
+            sceneId={activeScene}
+            events={sceneEvents}
+            markerColor={cfg.mapLayer.color ?? cfg.accentColor}
+          />
 
           <div className={styles.charts}>
             <div className={styles.chartBox}>
-              <div className={styles.panelTitle}>事件趋势（近7日）</div>
-              <TrendChart events={events} />
+              <div className={styles.panelTitle}>{trendTitle}</div>
+              <TrendChart events={sceneEvents} chartType={cfg.chartConfig.type as ChartType} />
             </div>
             <div className={styles.chartBox}>
-              <div className={styles.panelTitle}>工单处置率</div>
-              <DisposeChart events={events} />
+              <div className={styles.panelTitle}>{secondaryChartTitle}</div>
+              <DisposeChart events={sceneEvents} chartType={cfg.chartConfig.type as ChartType} />
             </div>
           </div>
         </div>
 
         {/* ===== 右侧面板 ===== */}
         <div className={styles.sidePanelRight}>
-          <div className={`${styles.glassPanel} ${styles.glassPanelShrink}`}>
-            <div className={styles.panelHeader}>
-              <div className={styles.panelTitle}>基层治理端</div>
-              <div className={styles.panelActions}><span className={styles.panelAction}>进入 →</span></div>
-            </div>
-            <div className={styles.govGrid}>
-              {[
-                { val: "24", label: "网格数", tone: "cyan" as const },
-                { val: "138", label: "网格员", tone: "green" as const },
-                { val: String(pendingEventCount), label: "待处理事件", tone: "amber" as const },
-                { val: "96%", label: "满意度", tone: "text" as const },
-              ].map((row) => (
-                <div key={row.label} className={styles.govCard}>
-                  <div className={`${styles.govVal} ${govTintMap[row.tone]}`}>{row.val}</div>
-                  <div className={styles.govLabel}>{row.label}</div>
+          {cfg.rightPanel.type === "governance" ? (
+            <>
+              <div className={`${styles.glassPanel} ${styles.glassPanelShrink}`}>
+                <div className={styles.panelHeader}>
+                  <div className={styles.panelTitle}>{currentScene.label}</div>
+                  <div className={styles.panelActions}><span className={styles.panelAction}>进入 →</span></div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={`${styles.glassPanel} ${styles.glassPanelShrink}`}>
-            <div className={styles.panelHeader}>
-              <div className={styles.panelTitle}>AI 智能助手</div>
-              <div className={styles.panelActions}>
-                <span className={styles.aiOnline}><span className={styles.aiDot}>●</span> 在线</span>
-              </div>
-            </div>
-            <div className={styles.aiBubble}>
-              {highEvent ? (
-                <div className={styles.clampedText} title={`🤖 检测到 ${highEvent.location} 发生 ${highEvent.title}，建议立即派遣处置。`}>
-                  🤖 检测到 <span className={styles.hlAmber}>{highEvent.location}</span> 发生 <span className={styles.hlRed}>{highEvent.title}</span>，建议立即派单。
-                </div>
-              ) : (
-                <div className={styles.clampedText} title="🤖 当前区域无高危告警，系统运行正常。">
-                  🤖 当前区域无高危告警，系统运行正常。
-                </div>
-              )}
-            </div>
-            <div className={styles.aiActions}>
-              <button type="button" className={styles.aiBtnPrimary} onClick={() => highEvent && openDispatchModal(highEvent)} disabled={!highEvent}>立即派单</button>
-              <button type="button" className={styles.aiBtnOutline} onClick={() => setAiModalOpen(true)}>问 AI</button>
-            </div>
-          </div>
-
-          <div className={`${styles.glassPanel} ${styles.glassPanelGrow}`}>
-            <div className={styles.panelHeader}>
-              <div className={styles.panelTitle}>实时告警</div>
-            </div>
-            <div className={styles.alertStack}>
-              {eventsLoading && criticalAlerts.length === 0 ? (
-                <div className={styles.listEmpty} aria-busy="true">
-                  <div className={styles.listEmptyPulse} />
-                  <div className={styles.listEmptyTitle}>正在同步告警</div>
-                  <div className={styles.listEmptyHint}>高危待处置事件加载中</div>
-                </div>
-              ) : criticalAlerts.length > 0 ? (
-                criticalAlerts.map((ev) => (
-                  <div key={ev.id} className={styles.alertItem} onClick={() => openDispatchModal(ev)}>
-                    <div className={`${styles.levelBar} ${styles[ev.level]}`}></div>
-                    <div className={styles.alertContent}>
-                      <div className={styles.alertTitle}>{ev.title}</div>
-                      <div className={styles.alertLocation}>{ev.location}</div>
+                <div className={styles.govGrid}>
+                  {sceneGovRows.map((row) => (
+                    <div key={row.label} className={styles.govCard}>
+                      <div className={`${styles.govVal} ${govTintMap[row.tone]}`}>{row.val}</div>
+                      <div className={styles.govLabel}>{row.label}</div>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className={`${styles.listEmpty} ${styles.listEmptySafe}`}>
-                  <div className={styles.listEmptyTitle}>暂无高危告警</div>
-                  <div className={styles.listEmptyHint}>当前无待处置的高危事件</div>
+                  ))}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+
+              <div className={`${styles.glassPanel} ${styles.glassPanelShrink}`}>
+                <div className={styles.panelHeader}>
+                  <div className={styles.panelTitle}>AI 智能助手</div>
+                  <div className={styles.panelActions}>
+                    <span className={styles.aiOnline}><span className={styles.aiDot}>●</span> 在线</span>
+                  </div>
+                </div>
+                <div className={styles.aiBubble}>
+                {highEvent ? (
+                    <div className={styles.clampedText} title={`🤖 检测到 ${highEvent.location} 发生 ${highEvent.title}，建议立即派遣处置。`}>
+                      🤖 检测到 <span className={styles.hlAmber}>{highEvent.location}</span> 发生 <span className={styles.hlRed}>{highEvent.title}</span>，建议立即派单。
+                    </div>
+                  ) : (
+                    <div className={styles.clampedText} title="🤖 当前区域无高危告警，系统运行正常。">
+                      🤖 当前区域无高危告警，系统运行正常。
+                    </div>
+                  )}
+                </div>
+                <div className={styles.aiActions}>
+                  <button type="button" className={styles.aiBtnPrimary} onClick={() => highEvent && openDispatchModal(highEvent)} disabled={!highEvent}>立即派单</button>
+                  <button type="button" className={styles.aiBtnOutline} onClick={() => setAiModalOpen(true)}>问 AI</button>
+                </div>
+              </div>
+
+              <div className={`${styles.glassPanel} ${styles.glassPanelGrow} ${criticalAlerts.length > 0 ? styles.alertPanel : styles.alertPanelSafe}`}>
+                <div className={styles.panelHeader}>
+                  <div className={styles.panelTitle}>实时告警</div>
+                  {criticalAlerts.length > 0 && (
+                    <div className={styles.panelActions}>
+                      <span className={styles.alertCount}>{criticalAlerts.length} 条高危</span>
+                    </div>
+                  )}
+                </div>
+                <div className={styles.alertStack}>
+                  {eventsLoading && criticalAlerts.length === 0 ? (
+                    <div className={styles.listEmpty} aria-busy="true">
+                      <div className={styles.listEmptyPulse} />
+                      <div className={styles.listEmptyTitle}>正在同步告警</div>
+                      <div className={styles.listEmptyHint}>高危待处置事件加载中</div>
+                    </div>
+                  ) : criticalAlerts.length > 0 ? (
+                    criticalAlerts.map((ev) => (
+                      <div key={ev.id} className={styles.alertItem} onClick={() => openDispatchModal(ev)}>
+                        <div className={`${styles.levelBar} ${styles[ev.level]}`}></div>
+                        <div className={styles.alertContent}>
+                          <div className={styles.alertTitle}>{ev.title}</div>
+                          <div className={styles.alertLocation}>{ev.location}</div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className={`${styles.listEmpty} ${styles.listEmptySafe}`}>
+                      <div className={styles.listEmptyTitle}>暂无高危告警</div>
+                      <div className={styles.listEmptyHint}>当前无待处置的高危事件</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <RightPanel
+              type={cfg.rightPanel.type}
+              title={cfg.label}
+              pendingCount={pendingEventCount}
+              doingCount={doingEventCount}
+              doneCount={doneEventCount}
+              highCount={highCount}
+              midCount={midCount}
+              lowCount={lowCount}
+            />
+          )}
         </div>
       </div>
 

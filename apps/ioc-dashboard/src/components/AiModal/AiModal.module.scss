@@ -102,11 +102,11 @@
   cursor: pointer;
 }
 
-::global(html.dark) .overlay {
+:global(html.dark) .overlay {
   background: color-mix(in srgb, var(--bg-canvas) 82%, transparent);
 }
 
-::global(html.dark) .box {
+:global(html.dark) .box {
   border-color: color-mix(in srgb, var(--accent-color) 26%, transparent);
   box-shadow:
     var(--shadow-panel),

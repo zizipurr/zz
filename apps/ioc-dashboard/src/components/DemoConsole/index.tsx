@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import request from '@/api/request'
 import styles from './DemoConsole.module.scss'
 
@@ -14,16 +15,30 @@ const EVENT_TEMPLATES = [
   { title: '噪音扰民投诉', level: 'low' },
 ]
 
+const SCENE_TEMPLATES = [
+  { scene: 'community', title: '社区井盖破损待处置', level: 'mid', location: '南山区-粤海街道-科技园社区' },
+  { scene: 'emergency', title: '燃气泄漏应急处置', level: 'high', location: '福田区-福华路-会展中心站口' },
+  { scene: 'traffic', title: '高峰拥堵优化工单', level: 'low', location: '罗湖区-深南东路-文锦路口' },
+  { scene: 'service', title: '便民事项超时预警', level: 'mid', location: '宝安区-新安街道-政务服务大厅' },
+] as const
+
+const SCENE_LABELS: Record<(typeof SCENE_TEMPLATES)[number]['scene'], string> = {
+  community: '智慧社区',
+  emergency: '城安应急',
+  traffic: '智慧交通',
+  service: '城市服务',
+}
+
 export default function DemoConsole() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [locations, setLocations] = useState<string[]>([])
   const [log, setLog] = useState<string[]>([])
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    request.get<string[]>('/locations').then((res) => {
-      setLocations(res.data)
-    })
+    // 预热 locations 接口，避免首次推送时延迟（演示体验）
+    void request.get<string[]>('/locations')
+    setMounted(true)
   }, [])
 
   function addLog(msg: string) {
@@ -69,7 +84,30 @@ export default function DemoConsole() {
     }
   }
 
-  return (
+  async function pushSceneEvent(index: number) {
+    const tpl = SCENE_TEMPLATES[index]
+    if (!tpl) return
+    setLoading(true)
+    try {
+      await request.post('/events', {
+        title: tpl.title,
+        level: tpl.level,
+        location: tpl.location,
+        district: tpl.location.split('-')[0],
+        scene: tpl.scene,
+      })
+      addLog(`✅ 场景推送：${SCENE_LABELS[tpl.scene]} · ${tpl.title}`)
+      window.dispatchEvent(new CustomEvent('refresh_events'))
+    } catch {
+      addLog('❌ 场景推送失败，请检查登录态/接口权限')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!mounted) return null
+
+  return createPortal(
     <>
       <button
         type="button"
@@ -93,7 +131,6 @@ export default function DemoConsole() {
             <div className={styles.sectionTitle}>快速推送事件</div>
             <div className={styles.btnGrid}>
               {EVENT_TEMPLATES.map((tpl, i) => {
-                const location = locations[i] || `位置${i + 1}`
                 const label = `${tpl.title}（${tpl.level === 'high' ? '高危' : tpl.level === 'mid' ? '中危' : '低危'}）`
                 return (
                   <button
@@ -124,6 +161,24 @@ export default function DemoConsole() {
             </div>
           </div>
 
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>一键场景演示（C2）</div>
+            <div className={styles.btnGrid}>
+              {SCENE_TEMPLATES.map((tpl, i) => (
+                <button
+                  key={tpl.scene}
+                  type="button"
+                  className={`${styles.mockBtn} ${styles.sceneBtn}`}
+                  onClick={() => pushSceneEvent(i)}
+                  disabled={loading}
+                >
+                  <span className={styles.sceneBtnTop}>📌 {SCENE_LABELS[tpl.scene]}</span>
+                  <span className={styles.sceneBtnBottom}>{tpl.title}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {log.length > 0 && (
             <div className={styles.logBox}>
               {log.map((l, i) => (
@@ -136,5 +191,7 @@ export default function DemoConsole() {
         </div>
       )}
     </>
+    ,
+    document.body
   )
 }

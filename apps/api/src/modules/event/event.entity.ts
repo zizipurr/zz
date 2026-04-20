@@ -7,6 +7,14 @@ import {
 } from 'typeorm'
 import { EventLevel, EventStatus } from '@/common/enums'
 
+export enum EventScene {
+  IOC = 'ioc',
+  COMMUNITY = 'community',
+  EMERGENCY = 'emergency',
+  TRAFFIC = 'traffic',
+  SERVICE = 'service',
+}
+
 @Entity('events')
 export class Event {
   @PrimaryGeneratedColumn()
@@ -54,6 +62,28 @@ export class Event {
 
   @Column({ nullable: true })
   reporterId: number // 上报人ID
+
+  @Column({ nullable: true })
+  dispatcher: string // 派单人
+
+  @Column({ type: 'datetime', nullable: true })
+  dispatchedAt: Date // 派单时间
+
+  @Column({ type: 'datetime', nullable: true })
+  startedAt: Date // 接单处理时间
+
+  @Column({ type: 'datetime', nullable: true })
+  completedAt: Date // 完结时间
+
+  @Column({ type: 'text', nullable: true })
+  completionResult: string // 处置结果备注
+
+  @Column({
+    type: 'enum',
+    enum: EventScene,
+    default: EventScene.IOC,
+  })
+  scene: EventScene
 
   @CreateDateColumn()
   createdAt: Date

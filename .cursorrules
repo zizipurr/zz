@@ -86,6 +86,15 @@ GET    /api/locations
 new_message    → 有新消息，前端刷新未读数
 event_updated  → 事件状态变更，前端刷新事件列表
 
+### TypeORM Migration 命令约束（后端 apps/api）
+- **禁止**使用 `npx typeorm ...`（会绕过项目的 TS 路径别名解析，导致 `@/common` 等模块在 CLI 场景下找不到）
+- **必须**使用项目脚本运行 TypeORM CLI：
+  - 运行迁移（推荐）：
+    - `pnpm --filter @zcy/api typeorm -- -d src/db/data-source.ts migration:run`
+  - 其他命令同理（示例）：
+    - `pnpm --filter @zcy/api typeorm -- -d src/db/data-source.ts migration:show`
+    - `pnpm --filter @zcy/api typeorm -- -d src/db/data-source.ts migration:revert`
+
 
 ### 开发顺序规范
 1. 确认需要哪个接口

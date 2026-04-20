@@ -17,7 +17,7 @@
   padding: 0 clamp(12px, 2vw, 24px);
 }
 
-::global(html.dark) .topbar {
+:global(html.dark) .topbar {
   box-shadow: 0 4px 30px color-mix(in srgb, var(--accent-color) 10%, transparent),
     inset 0 -1px 1px color-mix(in srgb, var(--accent-color) 15%, transparent);
 }
@@ -68,6 +68,23 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.backBtn {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-glass);
+  background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.backBtn:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 55%, transparent);
+  color: var(--accent-color);
 }
 
 .right {

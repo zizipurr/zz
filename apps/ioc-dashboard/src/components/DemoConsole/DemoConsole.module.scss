@@ -34,6 +34,9 @@
   box-shadow: var(--shadow-panel);
   z-index: 500;
   overflow: hidden;
+  max-height: min(72vh, 680px);
+  display: flex;
+  flex-direction: column;
 }
 
 :global(html.dark) .panel {
@@ -95,6 +98,8 @@
   transition: all 0.15s;
   text-align: left;
   background: transparent;
+  color: var(--text-primary);
+  line-height: 1.35;
 }
 .mockBtn:disabled {
   opacity: 0.5;
@@ -126,6 +131,37 @@
 }
 .mockBtn.low:hover:not(:disabled) {
   background: rgba(34, 211, 238, 0.12);
+}
+
+.sceneBtn {
+  min-height: 48px;
+  border-color: color-mix(in srgb, var(--accent-color) 32%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.sceneBtn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent-color) 58%, transparent);
+  background: color-mix(in srgb, var(--accent-color) 16%, transparent);
+}
+
+.sceneBtnTop {
+  font-size: 11px;
+  color: color-mix(in srgb, var(--accent-color) 70%, #f472b6);
+  letter-spacing: 0.2px;
+  text-transform: lowercase;
+}
+
+.sceneBtnBottom {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .actionRow {
@@ -177,4 +213,21 @@
   color: var(--text-secondary);
   padding: 2px 0;
   line-height: 1.5;
+}
+
+@media (max-width: 1024px) {
+  .trigger {
+    bottom: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .panel {
+    right: 12px;
+    left: 12px;
+    width: auto;
+    bottom: 64px;
+    max-height: min(74vh, 620px);
+  }
 }
