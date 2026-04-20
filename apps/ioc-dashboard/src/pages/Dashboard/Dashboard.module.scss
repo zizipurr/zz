@@ -72,9 +72,14 @@ html.dark .glassPanel::after {
   border-radius: inherit;
 }
 
-/* 实时告警面板状态类（JSX 引用，无附加样式） */
-.alertPanel {}
-.alertPanelSafe {}
+/* 实时告警面板状态类（JSX 引用） */
+.alertPanel {
+  border-color: var(--border-glass);
+}
+
+.alertPanelSafe {
+  border-color: var(--border-glass);
+}
 
 /* 侧栏区排版 */
 .sidePanelLeft { display: grid; grid-template-rows: 1.2fr 1fr; gap: 20px; min-height: 0; }
@@ -300,6 +305,28 @@ html.dark .glassPanel::after {
 
 /* ===== 中间核心区 ===== */
 .center { min-height: 0; display: flex; flex-direction: column; }
+.sceneFadeInA { animation: sceneFadeInA 200ms ease-out both; }
+.sceneFadeInB { animation: sceneFadeInB 200ms ease-out both; }
+
+@keyframes sceneFadeInA {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sceneFadeInB {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.breatheDanger {
+  animation: breatheDanger 2s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes breatheDanger {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
 .scenePills { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 
 .scenePill {

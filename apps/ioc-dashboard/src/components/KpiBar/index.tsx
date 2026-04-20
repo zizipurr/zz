@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Radio, Lightbulb, Building2, TrafficCone, AlertTriangle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useKpiStore, type KpiSummary } from '@/store/kpiStore'
@@ -6,19 +6,45 @@ import { useAuthStore } from '@/store/authStore'
 import type { SceneKpi } from '@/config/sceneConfig'
 import styles from './KpiBar.module.scss'
 
-function AnimatedNumber({ target }: { target: number }) {
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3)
+}
+
+function AnimatedNumber({
+  target,
+  nonce,
+}: {
+  target: number
+  nonce: number
+}) {
   const [val, setVal] = useState(0)
+  const rafRef = useRef<number | null>(null)
   useEffect(() => {
-    let start = 0
-    const step = target / 60
-    const timer = setInterval(() => {
-      start += step
-      if (start >= target) { setVal(target); clearInterval(timer) }
-      else setVal(Math.floor(start))
-    }, 16)
-    return () => clearInterval(timer)
-  }, [target])
-  return <span>{val.toLocaleString()}</span>
+    const durationMs = 800
+    const start = performance.now()
+    const from = 0
+    const to = Number.isFinite(target) ? target : 0
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs)
+      const eased = easeOutCubic(t)
+      const cur = from + (to - from) * eased
+      setVal(cur)
+      if (t < 1) rafRef.current = requestAnimationFrame(tick)
+    }
+
+    rafRef.current = requestAnimationFrame(tick)
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    // nonce 用于“数据刷新但数值不变”的重启动画
+  }, [target, nonce])
+
+  const rounded = Math.max(0, val)
+  if (Math.abs(target % 1) > 0.00001) return <span>{rounded.toFixed(1)}</span>
+  return <span>{Math.round(rounded).toLocaleString()}</span>
 }
 
 const TENANT_NAMES: Record<string, string> = {
@@ -58,6 +84,7 @@ export default function KpiBar({ kpis }: Props) {
   const user = useAuthStore((s) => s.user)
   const currentTenantId = useAuthStore((s) => s.currentTenantId)
   const navigate = useNavigate()
+  const [nonce, setNonce] = useState(0)
 
   // 当前展示的城市标注
   // super_admin 无租户时显示「全局」，有租户时显示城市名
@@ -73,7 +100,10 @@ export default function KpiBar({ kpis }: Props) {
     // 若用 sceneConfig 渲染 KPI（演示优先），不强依赖后端 KPI 接口
     if (!kpis) fetchKpi()
 
-    const onRefresh = () => { void fetchKpi() }
+    const onRefresh = () => {
+      setNonce((n) => n + 1)
+      void fetchKpi()
+    }
 
     function onVisible() {
       if (!document.hidden) fetchKpi()
@@ -91,6 +121,11 @@ export default function KpiBar({ kpis }: Props) {
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [fetchKpi, kpis])
+
+  useEffect(() => {
+    // 场景切换时（KPI 列配置变化），强制重启动画：从 0 滚动到新目标值
+    setNonce((n) => n + 1)
+  }, [kpis])
 
   const viewKpis = useMemo(() => kpis ?? null, [kpis])
 
@@ -133,7 +168,7 @@ export default function KpiBar({ kpis }: Props) {
             {row.alert ? <span className={styles.statusBadge}>重点</span> : null}
           </div>
           <div className={`${styles.heroNumber} ${row.alert ? styles.red : ''}`}>
-            <AnimatedNumber target={parseNumeric(row.value)} />
+            <AnimatedNumber target={parseNumeric(row.value)} nonce={nonce} />
             {row.unit ? <span className={styles.unit}>{row.unit}</span> : null}
           </div>
           <div className={styles.kpiFooter}>
@@ -180,7 +215,10 @@ export default function KpiBar({ kpis }: Props) {
             <div className={styles.kpiLabel}>{card.label}</div>
           </div>
           <div className={`${styles.heroNumber} ${styles[card.color] || ''}`}>
-            <AnimatedNumber target={kpi[card.key as keyof KpiSummary] as number ?? 0} />
+            <AnimatedNumber
+              target={kpi[card.key as keyof KpiSummary] as number ?? 0}
+              nonce={nonce}
+            />
           </div>
           <div className={styles.kpiFooter}>
             <span className={`${styles.kpiDelta} ${styles[card.deltaClass] || ''}`}>

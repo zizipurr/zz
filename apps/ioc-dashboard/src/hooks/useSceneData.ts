@@ -38,13 +38,13 @@ export function useSceneData() {
 
   useEffect(() => {
     void fetchEvents({ scene: cfg.sceneParam });
-    void fetchKpi({ scene: cfg.sceneParam });
+    void fetchKpi({ scene: cfg.key });
   }, [cfg.sceneParam, fetchEvents, fetchKpi]);
 
   useEffect(() => {
     function onRefresh() {
       void fetchEventsRef.current({ scene: cfg.sceneParam });
-      void fetchKpiRef.current({ scene: cfg.sceneParam });
+      void fetchKpiRef.current({ scene: cfg.key });
     }
     window.addEventListener("refresh_events", onRefresh);
     window.addEventListener("tenant_changed", onRefresh);
@@ -64,7 +64,7 @@ export function useSceneData() {
   const kpis = useMemo(() => {
     return cfg.kpis.map((k) => {
       const raw = k.field ? getByPath(kpi, k.field) : undefined;
-      const val = k.staticValue ?? (raw ?? "--");
+      const val = raw ?? "--";
       const trendRaw = k.trendField ? getByPath(kpi, k.trendField) : undefined;
       const trend = trendRaw !== undefined ? String(trendRaw) : (k.trend ?? "");
       return {

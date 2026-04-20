@@ -63,43 +63,34 @@ export default function DispatchModal({ event, onClose }: Props) {
   const [remark, setRemark] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [dispatchError, setDispatchError] = useState<string | null>(null)
   const [detail, setDetail] = useState<EventDetail | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  
   const dispatch = useEventStore(s => s.dispatch)
   const { user, currentTenantId } = useAuthStore()
 
-  // tenantId 仅用于 useEffect 依赖，实际不再手动拼 URL
-  // super_admin 的 tenantId 由 request.ts 拦截器自动注入到 query params
   const tenantId = user?.role === 'super_admin' ? currentTenantId : user?.tenantId
 
   useEffect(() => {
-    // 直接调用，tenantId 由 request 拦截器自动处理（super_admin 会加 ?tenantId=...）
-    // 非 super_admin 用户的 tenantId 由后端从 JWT 读取，无需前端传
+    setLoading(true)
     request.get<StaffUser[]>('/users/staff')
       .then(res => {
         const list = (res.data ?? []) as StaffUser[]
         setStaffList(list)
         if (list.length > 0) setAssignee(list[0].username)
       })
-      .catch(() => {})
       .finally(() => setLoading(false))
   }, [tenantId])
 
-  const fetchDetail = useRef(async () => {})
-  fetchDetail.current = async () => {
-    try {
-      const { data } = await request.get<EventDetail>(`/events/${event.id}`)
-      if (data) setDetail(data)
-    } catch {
-      // ignore detail failure, keep base event info
-    }
-  }
-
   useEffect(() => {
-    void fetchDetail.current()
+    let cancelled = false
+    request.get<EventDetail>(`/events/${event.id}`)
+      .then(({ data }) => { if (!cancelled && data) setDetail(data) })
+      .catch(err => console.error('Failed to fetch event details', err))
+    return () => { cancelled = true }
   }, [event.id])
 
-  // 点击外部关闭下拉
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -110,28 +101,24 @@ export default function DispatchModal({ event, onClose }: Props) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  useEffect(() => {
-    function onEventUpdated(e: Event) {
-      const detailEvt = e as CustomEvent<{ id?: number }>
-      if (Number(detailEvt.detail?.id) !== event.id) return
-      void fetchDetail.current()
-    }
-    window.addEventListener('event_updated_payload', onEventUpdated)
-    return () => window.removeEventListener('event_updated_payload', onEventUpdated)
-  }, [event.id])
-
   async function handleDispatch() {
     if (!assignee) return
-    await dispatch(event.id, assignee, remark)
-    onClose()
+    setDispatchError(null)
+    try {
+      await dispatch(event.id, assignee, remark)
+      onClose()
+    } catch (err) {
+      console.error('Dispatch failed', err)
+      setDispatchError('派单失败，请重试')
+    }
   }
 
   const selected = staffList.find(u => u.username === assignee)
-  const selectedDisplay = selected ? staffLabel(selected) : (loading ? '加载中…' : (assignee || '请选择网格员'))
+  const selectedDisplay = selected ? staffLabel(selected) : (loading ? '加载中…' : '请选择网格员')
 
-  // 位置展示：优先 district，再 location
   const source = detail ?? event
   const locationDisplay = [source.district, source.location].filter(Boolean).join(' · ') || '—'
+  
   const timeline: TimelineItem[] = source.timeline && source.timeline.length > 0
     ? source.timeline
     : [
@@ -148,6 +135,7 @@ export default function DispatchModal({ event, onClose }: Props) {
           <div className={styles.title}>事件详情 — {source.title}</div>
           <button type="button" className={styles.close} onClick={onClose}>✕</button>
         </div>
+        
         <div className={styles.body}>
           <div className={styles.grid}>
             <div className={styles.field}>
@@ -161,51 +149,63 @@ export default function DispatchModal({ event, onClose }: Props) {
               </div>
             </div>
           </div>
+
           <div className={styles.field}>
             <label>当前状态</label>
             <div className={styles.val}>{STATUS_LABELS[source.status]}</div>
           </div>
-          <div className={styles.field}>
-            <label>派单给</label>
-            <div className={styles.customSelect} ref={dropdownRef}>
-              <div
-                className={`${styles.selectTrigger} ${dropdownOpen ? styles.open : ''}`}
-                onClick={() => !loading && staffList.length > 0 && setDropdownOpen(v => !v)}
-              >
-                <span>{selectedDisplay}</span>
-                <span className={styles.arrow}>▾</span>
-              </div>
-              {dropdownOpen && staffList.length > 0 && (
-                <div className={styles.dropdown}>
-                  {staffList.map(u => (
-                    <div
-                      key={u.id}
-                      className={`${styles.option} ${assignee === u.username ? styles.selected : ''}`}
-                      onClick={() => { setAssignee(u.username); setDropdownOpen(false) }}
-                    >
-                      {staffLabel(u)}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className={styles.field}>
-            <label>备注</label>
-            <textarea className={styles.textarea} value={remark} onChange={e => setRemark(e.target.value)} placeholder="输入派单备注…" />
-          </div>
 
+          {source.status === 'pending' && (
+            <>
+              <div className={styles.field}>
+                <label>派单给</label>
+                <div className={styles.customSelect} ref={dropdownRef}>
+                  <div
+                    className={`${styles.selectTrigger} ${dropdownOpen ? styles.open : ''}`}
+                    onClick={() => !loading && staffList.length > 0 && setDropdownOpen(v => !v)}
+                  >
+                    <span>{selectedDisplay}</span>
+                    <span className={styles.arrow}>▾</span>
+                  </div>
+                  {dropdownOpen && (
+                    <div className={styles.dropdown}>
+                      {staffList.map(u => (
+                        <div
+                          key={u.id}
+                          className={`${styles.option} ${assignee === u.username ? styles.selected : ''}`}
+                          onClick={() => { setAssignee(u.username); setDropdownOpen(false) }}
+                        >
+                          {staffLabel(u)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className={styles.field}>
+                <label>派单备注</label>
+                <textarea 
+                  className={styles.textarea} 
+                  value={remark} 
+                  onChange={e => setRemark(e.target.value)} 
+                  placeholder="输入派单备注内容…" 
+                />
+              </div>
+            </>
+          )}
+
+          {/* 优化后的横向流程轴 */}
           <div className={styles.timelineSection}>
             <div className={styles.timelineTitle}>处置记录</div>
             <div className={styles.timelineList}>
               {timeline.map((node, idx) => {
                 const done = !!node.time
-                const last = idx === timeline.length - 1
+                const isLast = idx === timeline.length - 1
                 return (
                   <div key={node.action} className={styles.timelineRow}>
                     <div className={styles.timelineAxis}>
                       <span className={`${styles.timelineDot} ${done ? styles.dotDone : styles.dotPending}`} />
-                      {!last && (
+                      {!isLast && (
                         <span className={`${styles.timelineLine} ${done ? styles.lineDone : styles.linePending}`} />
                       )}
                     </div>
@@ -213,25 +213,39 @@ export default function DispatchModal({ event, onClose }: Props) {
                       <div className={styles.timelineNodeTitle}>{TIMELINE_LABELS[node.action]}</div>
                       {done ? (
                         <div className={styles.timelineMeta}>
-                          <span>{node.actorName || '系统'}</span>
-                          <span>{formatTimelineTime(node.time)}</span>
+                          <span className={styles.actor}>{node.actorName || '系统'}</span>
+                          <span className={styles.time}>{formatTimelineTime(node.time)}</span>
                         </div>
                       ) : (
                         <div className={styles.timelinePending}>待完成</div>
                       )}
-                      {node.action === 'completed' && source.result ? (
-                        <div className={styles.resultCard}>{source.result}</div>
-                      ) : null}
                     </div>
                   </div>
                 )
               })}
             </div>
+            {source.status === 'done' && source.result && (
+              <div className={styles.resultSection}>
+                <label>处置结果</label>
+                <div className={styles.resultCard}>{source.result}</div>
+              </div>
+            )}
           </div>
         </div>
+
         <div className={styles.actions}>
+          {dispatchError && <span className={styles.errorMsg}>{dispatchError}</span>}
           <button type="button" className={styles.btnGhost} onClick={onClose}>取消</button>
-          <button type="button" className={styles.btnPrimary} onClick={handleDispatch} disabled={!assignee || loading}>确认派单</button>
+          {source.status === 'pending' && (
+            <button
+              type="button"
+              className={styles.btnPrimary}
+              onClick={handleDispatch}
+              disabled={!assignee || loading}
+            >
+              确认派单
+            </button>
+          )}
         </div>
       </div>
     </div>,

@@ -3,33 +3,50 @@ import request from '@/api/request'
 
 /** 与 GET /kpi/summary 返回一致 */
 export interface KpiSummary {
-  nodes: number
-  lights: number
-  residents: number
-  traffic: number
-  sea: number
-  alerts: number
-  events?: { total: number; pending: number; doing: number; done: number }
-  messages?: { unread: number }
-  // 交通场景附加字段
-  trafficTotal?: number
-  trafficAnomaly?: number
-  trafficOnline?: number
-  trafficAnomalyLabel?: string
-  // 应急场景附加字段
+  // overview
+  gridNodes?: number
+  lampNodes?: number
+  residents?: number
+  trafficCams?: number
+  emergencies?: number
+  pendingTotal?: number
+  processingTotal?: number
+  doneTotal?: number
+
+  // community
+  todayReports?: number
+  processing?: number
+  done?: number
+  satisfaction?: number
+  slaAvgResponse?: number
+  slaTimeout?: number
+  sla24hDoneRate?: number
+
+  // emergency
   highLevel?: number
   midLevel?: number
   lowLevel?: number
+  doneRate?: number
+  avgResponse?: number
+  onlineStaff?: number
+
+  // traffic
+  trafficTotal?: number
+  trafficAnomaly?: number
+  trafficOnline?: number
+
+  congestionCount?: number
+  parkingRate?: number
+  todayFlow?: number
+
+  // service
+  todayOrders?: number
+  onlineRate?: number
+  paymentCount?: number
+  hotlineRate?: number
 }
 
-const emptyKpi: KpiSummary = {
-  nodes: 0,
-  lights: 0,
-  residents: 0,
-  traffic: 0,
-  sea: 0,
-  alerts: 0,
-}
+const emptyKpi: KpiSummary = {}
 
 interface KpiState {
   kpi: KpiSummary
@@ -41,7 +58,7 @@ export const useKpiStore = create<KpiState>((set) => ({
   kpi: emptyKpi,
   loading: false,
   fetchKpi: async (opts) => {
-    set({ loading: true })
+    set({ loading: true, kpi: emptyKpi })
     try {
       const { data } = await request.get<KpiSummary>('/kpi/summary', { params: opts })
       set({ kpi: { ...emptyKpi, ...data }, loading: false })

@@ -3,7 +3,6 @@ import { KpiService } from './kpi.service'
 import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard'
 import { CurrentUser } from '@/common/decorators/current-user.decorator'
 import { ApiTags } from '@nestjs/swagger'
-import { EventScene } from '@/modules/event/event.entity'
 
 @ApiTags('kpi')
 @Controller('kpi')
@@ -15,7 +14,7 @@ export class KpiController {
   summary(
     @CurrentUser() user: any,
     @Query('tenantId') queryTenantId?: string,
-    @Query('scene') scene?: EventScene,
+    @Query('scene') scene?: string,
   ) {
     // super_admin 可指定 tenantId 切换视角；其他角色用自己的 tenantId
     const effectiveTenantId =

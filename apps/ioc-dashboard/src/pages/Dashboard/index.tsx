@@ -10,7 +10,7 @@ import { useKpiStore } from "@/store/kpiStore";
 import { useMessageStore } from "@/store/messageStore";
 import { sceneConfig, getSceneIdByPath, type SceneId } from "@/config/sceneConfig";
 import * as echarts from "echarts";
-import { CheckCheck, CheckCircle2, Eye, Inbox, MessageSquare } from "lucide-react";
+import { CheckCircle2, Inbox, MessageSquare } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSceneStore } from "@/stores/sceneStore";
@@ -26,6 +26,11 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 type EventLike = { status?: string; level?: string };
+function fmtNum(val: unknown) {
+  const n = typeof val === "number" ? val : Number(val);
+  if (!Number.isFinite(n)) return "0";
+  return n.toLocaleString("zh-CN");
+}
 // 辅助 Hook：监听 html 的 dark class 变化，通知图表重新渲染
 function useThemeObserver(callback: (isDark: boolean) => void) {
   useEffect(() => {
@@ -402,7 +407,6 @@ export default function Dashboard() {
     fetchMessages,
     fetchUnreadCount,
     markRead,
-    markAllRead,
     loading: messagesLoading,
   } = useMessageStore();
   const kpi = useKpiStore((s) => s.kpi);
@@ -414,6 +418,7 @@ export default function Dashboard() {
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiToastVisible, setAiToastVisible] = useState(false);
+  const [sceneFadeFlip, setSceneFadeFlip] = useState(false);
   
   const pendingAlerts = useMemo(() => sceneEvents.filter((e) => e.status !== "done"), [sceneEvents]);
   const pendingEventCount = useMemo(() => sceneEvents.filter((e) => e.status === "pending").length, [sceneEvents]);
@@ -449,7 +454,7 @@ export default function Dashboard() {
         { val: "96%", label: "满意度", tone: "text" },
       ],
       community: [
-        { val: kpi.residents.toLocaleString("zh-CN"), label: "住户数", tone: "green" },
+        { val: fmtNum(kpi.residents), label: "住户数", tone: "green" },
         { val: String(sceneEvents.length), label: "社区事件", tone: "cyan" },
         { val: String(sceneEvents.filter((e) => e.status === "pending").length), label: "待处理", tone: "amber" },
         { val: "95%", label: "工单满意度", tone: "text" },
@@ -461,7 +466,7 @@ export default function Dashboard() {
         { val: "8m", label: "平均响应", tone: "text" },
       ],
       traffic: [
-        { val: kpi.traffic.toLocaleString("zh-CN"), label: "监控接口", tone: "cyan" },
+        { val: fmtNum(kpi.trafficCams ?? 0), label: "监控接口", tone: "cyan" },
         { val: String(sceneEvents.length), label: "交通事件", tone: "amber" },
         { val: "23%", label: "拥堵指数", tone: "green" },
         { val: "88%", label: "设备在线率", tone: "text" },
@@ -474,7 +479,7 @@ export default function Dashboard() {
       ],
     };
     return rowsByScene[currentSceneId];
-  }, [currentSceneId, kpi.residents, kpi.traffic, pendingEventCount, sceneEvents]);
+  }, [currentSceneId, kpi.residents, kpi.trafficCams, pendingEventCount, sceneEvents]);
 
   const fetchMessagesRef = useRef(fetchMessages);
   const fetchUnreadCountRef = useRef(fetchUnreadCount);
@@ -520,6 +525,11 @@ export default function Dashboard() {
     root.style.setProperty("--accent-color", currentScene.accentColor);
     root.style.setProperty("--accent-hover", currentScene.accentColor);
   }, [currentScene.accentColor]);
+
+  useEffect(() => {
+    // 切场景时仅重播淡入动画，不 remount 中心区（避免地图重建）
+    setSceneFadeFlip((v) => !v);
+  }, [activeScene]);
 
   useEffect(() => {
     const openAlertCenter = () => setAlertModalOpen(true);
@@ -607,7 +617,12 @@ export default function Dashboard() {
                 sceneEvents.map((ev) => (
                   <div
                     key={ev.id}
-                    className={`${styles.eventItem} ${selectedEvent?.id === ev.id ? styles.active : ""} ${ev.status === "done" ? styles.done : ""}`}
+                    className={[
+                      styles.eventItem,
+                      selectedEvent?.id === ev.id ? styles.active : "",
+                      ev.status === "done" ? styles.done : "",
+                      ev.level === "high" && ev.status === "pending" ? styles.breatheDanger : "",
+                    ].filter(Boolean).join(" ")}
                     onClick={() => openDispatchModal(ev)}
                   >
                     <div className={`${styles.levelBar} ${styles[ev.level]}`}></div>
@@ -668,7 +683,7 @@ export default function Dashboard() {
         </div>
 
         {/* ===== 中间核心区 ===== */}
-        <div className={styles.center}>
+        <div className={`${styles.center} ${sceneFadeFlip ? styles.sceneFadeInA : styles.sceneFadeInB}`}>
           <TxMap
             sceneId={activeScene}
             events={sceneEvents}
@@ -748,7 +763,14 @@ export default function Dashboard() {
                     </div>
                   ) : criticalAlerts.length > 0 ? (
                     criticalAlerts.map((ev) => (
-                      <div key={ev.id} className={styles.alertItem} onClick={() => openDispatchModal(ev)}>
+                      <div
+                        key={ev.id}
+                        className={[
+                          styles.alertItem,
+                          ev.level === "high" && ev.status === "pending" ? styles.breatheDanger : "",
+                        ].filter(Boolean).join(" ")}
+                        onClick={() => openDispatchModal(ev)}
+                      >
                         <div className={`${styles.levelBar} ${styles[ev.level]}`}></div>
                         <div className={styles.alertContent}>
                           <div className={styles.alertTitle}>{ev.title}</div>
