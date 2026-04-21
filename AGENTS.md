@@ -10,6 +10,9 @@ alwaysApply: true
 
 # AGENTS
 
+> 配置体系职责边界见：`AI-CONFIG-BOUNDARIES.md`
+> 本文件定位：会话偏好与阶段性专项约束（避免和 `.cursorrules`/`CLAUDE.md` 重复）
+
 需要全程中文回复我，中文思考，中文交流
 
 ## IOC 大屏改动约束（2026-04-20）

@@ -4,6 +4,9 @@ description: 智城云 Monorepo 项目指南
 alwaysApply: true
 ---
 
+> 配置体系职责边界见：`AI-CONFIG-BOUNDARIES.md`
+> 本文件定位：项目背景与长期事实（结构/角色/技术栈/运行方式）
+
 # 项目概述
 
 智城云 Monorepo 项目，SaaS 多租户架构，包含后端 API、IOC 大屏、网格员小程序。

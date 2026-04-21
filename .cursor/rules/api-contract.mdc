@@ -1,0 +1,102 @@
+---
+description: 接口规范，修改 controller 或 service 时触发
+globs:
+  - apps/api/src/modules/**/*.controller.ts
+  - apps/api/src/modules/**/*.service.ts
+alwaysApply: false
+---
+
+> 配置体系职责边界见：`AI-CONFIG-BOUNDARIES.md`
+> 本文件定位：按路径触发规则（api-contract），内容应和 `.claude/rules/03-api-contract.md` 同源
+
+# 智城云 · 接口规范
+
+---
+
+## 统一响应格式
+
+后端全局 `TransformInterceptor` 自动包装，Controller 只返回业务数据：
+
+```json
+{ "code": 0, "data": {}, "message": "ok" }
+```
+
+**禁止** Controller 层手动包装 `{ code, data, message }`，否则二次包装。
+
+## HTTP 状态码语义
+
+| 码 | 含义 | 示例 |
+|---|---|---|
+| 200 | GET 成功 | 查询列表/详情 |
+| 201 | POST 成功 | 创建/派单/完结 |
+| 400 | 业务规则拒绝 | 状态不允许、重复操作 |
+| 401 | 未登录 | token缺失/过期 |
+| 403 | 无权限 | 不是你的工单、角色不够 |
+| 404 | 资源不存在 | 事件ID不存在 |
+| 409 | 并发冲突 | 同时接单竞争 |
+
+## 分页规范
+
+请求参数：`page`（从1开始）、`pageSize`（默认20）
+响应结构：`{ list: T[], total: number }`
+
+## 列表接口标准参数
+
+GET /events 支持以下筛选参数：
+```
+tenantId?   string   super_admin专属，其他从JWT取
+scene?      string   场景过滤
+status?     string   状态过滤
+district?   string   区县精确匹配
+keyword?    string   标题模糊搜索（LIKE %keyword%）
+page        number   默认1
+pageSize    number   默认20
+sortBy      string   默认createdAt
+sortOrder   DESC|ASC 默认DESC
+```
+
+## KPI 聚合接口
+
+GET /kpi/summary?scene=xxx
+
+各场景返回字段：
+```typescript
+// overview（不传scene）
+{ gridNodes, lampNodes, residents, trafficCams, emergencies,
+  pendingTotal, processingTotal, doneTotal }
+
+// community
+{ residents, todayReports, processing, done, sla24hDoneRate,
+  slaAvgResponse, slaTimeout }
+
+// emergency
+{ highLevel, midLevel, lowLevel, processing, doneRate, avgResponse }
+
+// traffic
+{ trafficTotal, trafficOnline, trafficAnomaly,
+  congestionCount, parkingRate, todayFlow }
+
+// service
+{ todayOrders, onlineRate, paymentCount, hotlineRate, satisfaction }
+```
+
+注：`processingTotal` = doing + escalated 之和
+
+## 消息接口
+
+GET /messages?type=alert&page=1&pageSize=20
+返回：`{ list, total, unreadCount: { alert, dispatch, complete, system, total } }`
+
+PATCH /messages/read
+body：`{ ids: number[] }` ids为空数组时标记全部已读
+
+GET /messages/unread-count
+返回：`{ alert, dispatch, complete, system, total }`
+
+## 公共接口（无需鉴权）
+
+```
+GET /api/locations/districts?tenantId=   获取区县列表
+GET /api/locations/tenants               获取所有租户
+GET /health                              健康检查
+```
